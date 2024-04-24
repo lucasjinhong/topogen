@@ -7,7 +7,6 @@ __all__ = ['Topo']
 寫topo_graph中每一格所映射的單位
 '''
 
-
 class Topo:
     def __init__(self):
         self.topo_dict = {
@@ -29,6 +28,9 @@ class Topo:
 
             advanced:
                 data rate (int): Data rate | default: random
+
+        Returns:
+            link (obj): Link object
         '''
         arg_list = ['data_rate']
 
@@ -46,20 +48,23 @@ class Topo:
         node_up = self.topo_dict['node'][node_up_name]
         node_down = self.topo_dict['node'][node_down_name]
 
-        node_up.link['down'].append(link_name)
-        node_down.link['up'].append(link_name)
+        if node_down not in node_up.child_node:
+            node_up.child_node.append(node_down)
 
-        node_up.link_reserve_time[link_name] = {
+        link = Link()
+        link.create_link(link_name, node_up, node_down, **kwargs)
+
+        node_up.link['down'].append(link)
+        node_down.link['up'].append(link)
+
+        node_up.link_reserve_time[link] = {
             'start': 0,
             'end': 0
         }
 
-        if node_down_name not in node_up.child_node:
-            node_up.child_node.append(node_down_name)
-
-        link = Link()
-        link.create_link(node_up, node_down, **kwargs)
         self.topo_dict['link'][link_name] = link
+
+        return link
 
     def add_node(self, node_name, node_type, **kwargs):
         '''
@@ -72,6 +77,9 @@ class Topo:
             advanced:
                 coordinate (dict): Coordinate of the node
                 {'x': int, 'y': int}
+
+        Returns:
+            node (obj): Node object
         '''
         args = ['coordinate']
 
@@ -92,26 +100,30 @@ class Topo:
             coordinate = None
 
         node = Node()
-        node.create_node(node_type, coordinate=coordinate)
+        node.create_node(node_name, node_type, coordinate=coordinate)
         self.topo_dict['node'][node_name] = node
 
-    def add_rule(self, link_name, conflict_link):
+        return node
+
+    def add_rule(self, link, conflict_link):
         '''
         Add some conflict link to the link
 
         Args:
-            link_name (str): Link name
+            link_name (str): Link name 
             conflict_link (list): Conflict link name
         '''
+        link = self.topo_dict['link'][link]
 
-        if link_name not in self.topo_dict['link']:
-            raise ValueError(f'{link_name} not exist')
-        
-        for link in conflict_link:
-            if link not in self.topo_dict['link']:
-                raise ValueError(f'{link} not exist')
-        
-        link = self.topo_dict['link'][link_name]
+        if link not in self.topo_dict['link'].values():
+            raise ValueError(f'{link.name} not exist')
+
+        for i, l in enumerate(conflict_link):
+            if l not in self.topo_dict['link'].keys():
+                raise ValueError(f'{l.name} not exist')
+            else:
+                conflict_link[i] = self.topo_dict['link'][l]
+
         link.link_conflict += conflict_link
 
     # =======================
@@ -122,36 +134,35 @@ class Topo:
         Find all path to node
         '''
 
-        for node_name, node in self.topo_dict['node'].items():
+        for node in self.topo_dict['node'].values():
             if node.type == 'donor':
-                donor_name = node_name
                 donor = node
 
-        if donor_name is None:
+        if donor is None:
             raise ValueError('Donor not found')
 
         path_to_node = donor.path_to_node
 
         # using stack
-        traversed_node_stack = [donor_name]
+        traversed_node_stack = [donor]
+
 
         # use DFS to find the path to node
         while traversed_node_stack:
-            node_name = traversed_node_stack.pop()
-            node = self.topo_dict['node'][node_name]
+            node = traversed_node_stack.pop()
 
-            for node_down_name in node.child_node:
-                if node_down_name not in path_to_node:
-                    path_to_node[node_down_name] = []
+            for node_down in node.child_node:
+                if node_down not in path_to_node:
+                    path_to_node[node_down] = []
 
                 if node == donor:
-                    path_to_node[node_down_name].append([donor_name, node_down_name])
+                    path_to_node[node_down].append([donor, node_down])
                 else:
-                    for path in path_to_node[node_name]:
-                        if path + [node_down_name] not in path_to_node[node_down_name]:
-                            path_to_node[node_down_name].append(path + [node_down_name])
+                    for path in path_to_node[node]:
+                        if path + [node_down] not in path_to_node[node_down]:
+                            path_to_node[node_down].append(path + [node_down])
 
-                traversed_node_stack.append(node_down_name)
+                traversed_node_stack.append(node_down)
 
     # =======================
     # Random generate method
@@ -220,20 +231,20 @@ class Topo:
         Generate the IAB donor
         '''
 
-        node_list = self.topo_dict['node']
+        nodes = self.topo_dict['node']
         left = len(self.topo_graph[0]) // 4 * 1
         right = len(self.topo_graph[0]) // 4 * 3
 
         # generate IAB donor, from the midpoint to the end
         for i in range(left, right):
-            if self.topo_graph[0][i] == 1 and '0' in node_list:
+            if self.topo_graph[0][i] == 1 and '0' in nodes:
                 self.topo_graph[0][i] = 0
 
-            elif self.topo_graph[0][i] == 1 and '0' not in node_list:
+            elif self.topo_graph[0][i] == 1 and '0' not in nodes:
                 self.add_node('0', 'donor', coordinate={'x': 0, 'y': i})
 
         # if after midpoint has no IAB donor, create one
-        if '0' not in node_list:
+        if '0' not in nodes:
             self.add_node('0', 'donor', coordinate={'x': 0, 'y': len(self.topo_graph[0]) // 2})
 
     def _node_generate(self, size, radiation_radius):
@@ -245,12 +256,12 @@ class Topo:
             radiation_radius (int): The radiation radius of the IAB node
         '''
 
-        node_list = self.topo_dict['node']
+        nodes = self.topo_dict['node']
         coordinate_exist = []
         node_idx = 0
 
-        while node_idx < len(node_list):
-            node = node_list[str(node_idx)]
+        while node_idx < len(nodes):
+            node = nodes[str(node_idx)]
             coordinate = node.coordinate
 
             # check the child node coordinate
@@ -259,14 +270,14 @@ class Topo:
             for coordinate in child_node_coordinate:
                 if coordinate in coordinate_exist:
                     coordinate_idx = coordinate_exist.index(coordinate) + 1
-                    child_node_name = str(coordinate_idx)
+                    child_node_name = nodes[str(coordinate_idx)]
                 else:
-                    child_node_name = str(len(node_list))
-                    self.add_node(child_node_name, 'node', coordinate={'x': coordinate[0], 'y': coordinate[1]})
+                    child_node_name = str(len(nodes))
+                    child_node = self.add_node(child_node_name, 'node', coordinate={'x': coordinate[0], 'y': coordinate[1]})
                     
                     coordinate_exist.append(coordinate)
 
-                node.child_node.append(child_node_name)
+                node.child_node.append(child_node)
 
             node_idx += 1
 
@@ -277,11 +288,11 @@ class Topo:
 
         node_list = self.topo_dict['node']
 
-        for node_up_name, node_up in node_list.items():
+        for node_up in node_list.values():
             node_downs = node_up.child_node
 
-            for node_down_name in node_downs:
-                self.add_link(node_up_name, node_down_name)
+            for node_down in node_downs:
+                self.add_link(node_up.name, node_down.name)
 
     def _find_child_node_coordinate(self, coordinate, size, radiation_radius):
         '''
@@ -321,9 +332,9 @@ class Topo:
             links = node.link['down'] + node.link['up']
 
             # check if link is conflict with other link
-            for link_name in links:
-                link_conflict = [l for l in links if l != link_name]
-                self.add_rule(link_name, link_conflict)
+            for link in links:
+                link_conflict = [l.name for l in links if l != link]
+                self.add_rule(link.name, link_conflict)
 
         return
 
@@ -347,21 +358,19 @@ class Topo:
         info = ''
 
         info += '---------------TOPO---------------\n\n'
-        nodes = self.topo_dict['node'].keys()
+        nodes = self.topo_dict['node'].values()
 
-        for node_name in nodes:
-            info += f'Node: {node_name}\n'
-            node = self.topo_dict['node'][node_name]
+        for node in nodes:
+            info += f'Node: {node.name}\n'
+            node = self.topo_dict['node'][node.name]
 
-            for link_name in node.link['down']:
-                link = self.topo_dict['link'][link_name]
+            for link in node.link['down']:
+                reserve_time_start = node.link_reserve_time[link]['start']
+                reserve_time_end = node.link_reserve_time[link]['end']
 
-                reserve_time_start = node.link_reserve_time[link_name]['start']
-                reserve_time_end = node.link_reserve_time[link_name]['end']
-
-                info += f'  Link: {link_name}' + \
+                info += f'  Link: {link.name}' + \
                         f' (Data Rate: {link.data_rate}' + \
-                        f', Link Conflict: {[l for l in link.link_conflict]}' + \
+                        f', Link Conflict: {[l.name for l in link.link_conflict]}' + \
                         f', Reservation Time: [{reserve_time_start}:{reserve_time_end}])\n'
 
         info += '\n---------------PATH---------------\n\n'
@@ -370,8 +379,13 @@ class Topo:
             if node.type == 'donor':
                 donor = node
 
-        for keys, values in donor.path_to_node.items():
-            info += f'link: {keys} (Path: {values})\n'
+        for link, paths in donor.path_to_node.items():
+            path = []
+
+            for p in paths:
+                path.append([n.name for n in p])
+
+            info += f'link: {link.name} (Path: {path})\n'
 
         info += '\n----------------------------------\n'
 
@@ -379,6 +393,7 @@ class Topo:
 
 class Link:
     def __init__(self):
+        self.name = None
         self.data_rate = 0
         self.node = {
             'up': None,
@@ -386,7 +401,7 @@ class Link:
         }
         self.link_conflict = []
 
-    def create_link(self, up_node, down_node, data_rate=None):
+    def create_link(self, name, node_up, node_down, data_rate=None):
         '''
         insert the link information
 
@@ -398,8 +413,9 @@ class Link:
                 data rate (int): Data rate | default: random
         '''
 
-        self.node['up'] = up_node
-        self.node['down'] = down_node
+        self.node['up'] = node_up
+        self.node['down'] = node_down
+        self.name = name
 
         if data_rate is not None:
             self.data_rate = data_rate
@@ -409,6 +425,7 @@ class Link:
 
 class Node:
     def __init__(self):
+        self.name = None
         self.type = None
         self.child_node = []
         self.link = {
@@ -428,7 +445,7 @@ class Node:
             'received': []
         }
 
-    def create_node(self, type_, **kwargs):
+    def create_node(self, name, type_, **kwargs):
         '''
         insert the node information
 
@@ -439,6 +456,7 @@ class Node:
             self.coordinate = kwargs.pop('coordinate')
 
         self.type = type_
+        self.name = name
 
         if type_ == 'donor':
             self.path_to_node = {}
