@@ -365,8 +365,8 @@ class Topo:
             node = self.topo_dict['node'][node.name]
 
             for link in node.link['down']:
-                reserve_time_start = node.link_reserve_time[link]['start']
-                reserve_time_end = node.link_reserve_time[link]['end']
+                reserve_time_start = node.link_reserve_time[link.name]['start']
+                reserve_time_end = node.link_reserve_time[link.name]['end']
 
                 info += f'  Link: {link.name}' + \
                         f' (Data Rate: {link.data_rate}' + \
