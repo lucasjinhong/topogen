@@ -153,14 +153,14 @@ class Topo:
 
             for node_down in node.child_node:
                 if node_down not in path_to_node:
-                    path_to_node[node_down] = []
+                    path_to_node[node_down.name] = []
 
                 if node == donor:
-                    path_to_node[node_down].append([donor, node_down])
+                    path_to_node[node_down.name].append([donor, node_down])
                 else:
-                    for path in path_to_node[node]:
-                        if path + [node_down] not in path_to_node[node_down]:
-                            path_to_node[node_down].append(path + [node_down])
+                    for path in path_to_node[node.name]:
+                        if path + [node_down] not in path_to_node[node_down.name]:
+                            path_to_node[node_down.name].append(path + [node_down])
 
                 traversed_node_stack.append(node_down)
 
@@ -385,7 +385,7 @@ class Topo:
             for p in paths:
                 path.append([n.name for n in p])
 
-            info += f'link: {link.name} (Path: {path})\n'
+            info += f'link: {link} (Path: {path})\n'
 
         info += '\n----------------------------------\n'
 
