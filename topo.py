@@ -57,7 +57,7 @@ class Topo:
         node_up.link['down'].append(link)
         node_down.link['up'].append(link)
 
-        node_up.link_reserve_time[link] = {
+        node_up.link_reserve_time[link.name] = {
             'start': 0,
             'end': 0
         }
