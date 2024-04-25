@@ -13,7 +13,7 @@ class Topo:
             'node': {},
             'link': {}
         }
-        self.topo_graph = {}
+        self.topo_graph = []
 
     # =======================
     # Adding method
@@ -200,10 +200,7 @@ class Topo:
             size (int): The size of the topo graph
             random (bool): Randomly generate the topo graph | default: False
         '''
-        self.topo_graph = {}
-
-        for i in range(size):
-            self.topo_graph[i] = [0] * size
+        self.topo_graph = [[0] * size] * size
 
         # if random is True, randomly generate the IAB node
         if random:
@@ -214,7 +211,7 @@ class Topo:
 
             random_node_amount = randint(min_node_amount, max_node_amount)
 
-            for row in self.topo_graph.values():
+            for row in self.topo_graph:
                 shuffle(position_pool)
 
                 # 取position_pool中前random_node_amount個的位置給IAB node
@@ -500,7 +497,7 @@ def __test_auto():
     topo = Topo()
     topo.random_generate()
 
-    for x in topo.topo_graph.values():
+    for x in topo.topo_graph:
         print(x)
     print()
 
