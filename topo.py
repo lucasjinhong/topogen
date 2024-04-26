@@ -123,7 +123,7 @@ class Topo:
         link.link_conflict += conflict_link
 
     # =======================
-    # Find Path method
+    # Function method
     # =======================
     def find_path(self, node_dict):
         '''
@@ -163,6 +163,26 @@ class Topo:
                 traversed_node_stack.append(node_down)
 
         return donor.path_to_node
+
+    def initialize_half_duplex_rule(self, node_dict=None):
+        '''
+        Auto Initialize the half duplex rule to the topo
+
+        Args:
+            node_dict (dict[obj]): The node object
+        '''
+        if not node_dict:
+            self._topo_dict['node'] = node_dict
+
+        for node in self._topo_dict['node'].values():
+            links = node.link['down'] + node.link['up']
+
+            # check if link is conflict with other link
+            for link in links:
+                link_conflict = [l.name for l in links if l != link]
+                self.add_rule(link.name, link_conflict)
+
+        return
 
     # =======================
     # Auto generate method
@@ -213,7 +233,7 @@ class Topo:
         self._topo_dict['node'] = node_dict
 
         self._link_generate()                # generate link
-        self._initialize_half_duplex_rule()
+        self.initialize_half_duplex_rule(self._topo_dict['node'])
 
         return self._topo_dict['link']
 
@@ -352,23 +372,6 @@ class Topo:
 
         return child_node_coordinate
 
-    def _initialize_half_duplex_rule(self):
-        '''
-        Auto Initialize the half duplex rule to the topo
-        '''
-
-        nodes = self._topo_dict['node'].values()
-
-        for node in nodes:
-            links = node.link['down'] + node.link['up']
-
-            # check if link is conflict with other link
-            for link in links:
-                link_conflict = [l.name for l in links if l != link]
-                self.add_rule(link.name, link_conflict)
-
-        return
-
     # =======================
     # Function
     # =======================
@@ -387,7 +390,7 @@ class Topo:
     # =======================
     # Get info method
     # =======================
-    def get_all_info(self, graph, node_dict, link_dict):
+    def get_all_info(self, node_dict, link_dict, graph = None):
         '''
         Print all the node and link information
 
@@ -400,9 +403,10 @@ class Topo:
         self._topo_dict['node'] = node_dict
         self._topo_dict['link'] = link_dict
 
-        info += '--------------GRAPH---------------\n\n'
-        for x in graph:
-            info += f'{x}\n'
+        if graph:
+            info += '--------------GRAPH---------------\n\n'
+            for x in graph:
+                info += f'{x}\n'
 
         info += '\n---------------TOPO---------------\n\n'
         nodes = self._topo_dict['node'].values()
@@ -509,41 +513,53 @@ class Node:
 
 # not implement yet
 def __test_manual():
+    print('===========Test manual============')
+
     topo = Topo()
+    topo_dict = {
+        'node': {},
+        'link': {}
+    }
 
     # add node
-    topo.add_node('0', 'donor')
-    topo.add_node('1', 'node')
-    topo.add_node('2', 'node')
-    topo.add_node('3', 'node')
-    topo.add_node('4', 'node')
+    node_dict = topo_dict['node']
+    node_dict['0'] = topo.add_node('0', 'donor')
+    node_dict['1'] =topo.add_node('1', 'node')
+    node_dict['2'] =topo.add_node('2', 'node')
+    node_dict['3'] =topo.add_node('3', 'node')
+    node_dict['4'] =topo.add_node('4', 'node')
 
     # add link
-    topo.add_link('0', '1')
-    topo.add_link('1', '2')
-    topo.add_link('2', '3')
-    topo.add_link('3', '4')
+    link_dict = topo_dict['link']
+    link_dict['0-1'] = topo.add_link('0', '1')
+    link_dict['1-2'] = topo.add_link('1', '2')
+    link_dict['2-3'] = topo.add_link('2', '3')
+    link_dict['3-4'] = topo.add_link('3', '4')
 
     # add link error
     try:
         topo.add_link('4', '0')
-    except ValueError as e:
-        print('\n--------Test add link error-------\n')
-        print(f'Error: {e}\n')
+    except AssertionError as e:
+        print('--------Test add link error-------\n')
+        print(f'Error: {e}')
 
     # add rule
-    topo.add_rule('0-1', ['1-2'])
-    topo.add_rule('1-2', ['0-1', '2-3'])
-    topo.add_rule('2-3', ['1-2', '3-4'])
-    topo.add_rule('3-4', ['2-3'])
+    topo.initialize_half_duplex_rule(node_dict)
 
     # find path
-    topo.find_path()
+    path_to_node = topo.find_path(node_dict)
+    donor = node_dict['0']
+    donor.path_to_node = path_to_node
 
     # print(topo)
-    print(topo)
+    info = topo.get_all_info(node_dict, link_dict)
+    print(info)
+
+    print('===============End================')
 
 def __test_auto():
+    print('\n============Test auto=============')
+
     topo = Topo()
     node_dict, graph = topo.auto_node_generate()
     link_dict = topo.auto_link_generate(node_dict)
@@ -553,9 +569,11 @@ def __test_auto():
     donor.path_to_node = path_to_node
 
     # print(topo)
-    info = topo.get_all_info(graph, node_dict, link_dict)
+    info = topo.get_all_info(node_dict, link_dict, graph)
     print(info)
 
+    print('===============End================')
+
 if __name__ == '__main__':
-    # __test_manual()
+    __test_manual()
     __test_auto()
