@@ -1,19 +1,22 @@
 from random import randint, shuffle
 from math import sqrt, ceil
 
-__all__ = ['Topo']
+__all__ = ['Topo.random_node_generate', 'Topo.link_generate', 'Topo.find_path', 'Topo.print_all']
 
 '''
-寫topo_graph中每一格所映射的單位
+todo:
+    1. 寫topo_graph中每一格所映射的單位
+    2. test_manual, 確定是否要直接讓user自己add node, link
+    3. donor隨機出現在任何一個位置，而node生成的的方式採用bfs graph生成
 '''
 
 class Topo:
     def __init__(self):
-        self.topo_dict = {
+        self._topo_dict = {
             'node': {},
             'link': {}
         }
-        self.topo_graph = []
+        self._topo_graph = []
 
     # =======================
     # Adding method
@@ -32,21 +35,22 @@ class Topo:
         Returns:
             link (obj): Link object
         '''
+
         arg_list = ['data_rate']
 
         if kwargs != {}:
             self._kwargs_arg_checker(kwargs, arg_list)
         
-        if node_up_name not in self.topo_dict['node']:
+        if node_up_name not in self._topo_dict['node']:
             raise ValueError(f'{node_up_name} not exist')
-        if node_down_name not in self.topo_dict['node']:
+        if node_down_name not in self._topo_dict['node']:
             raise ValueError(f'{node_down_name} not exist')
-        if self.topo_dict['node'][node_down_name].type == 'donor':
+        if self._topo_dict['node'][node_down_name].type == 'donor':
             raise ValueError(f'{node_down_name} is donor, cannot be down node')
 
         link_name = f'{node_up_name}-{node_down_name}'
-        node_up = self.topo_dict['node'][node_up_name]
-        node_down = self.topo_dict['node'][node_down_name]
+        node_up = self._topo_dict['node'][node_up_name]
+        node_down = self._topo_dict['node'][node_down_name]
 
         if node_down not in node_up.child_node:
             node_up.child_node.append(node_down)
@@ -62,7 +66,7 @@ class Topo:
             'end': 0
         }
 
-        self.topo_dict['link'][link_name] = link
+        self._topo_dict['link'][link_name] = link
 
         return link
 
@@ -81,12 +85,13 @@ class Topo:
         Returns:
             node (obj): Node object
         '''
+
         args = ['coordinate']
 
         if kwargs != {}:
             self._kwargs_arg_checker(kwargs, args)
 
-        if node_name in self.topo_dict['node']:
+        if node_name in self._topo_dict['node']:
             raise ValueError(f'{node_name} already exist')
         if node_type not in ['donor', 'node']:
             raise ValueError(f'{node_type} is not a valid type, ex.(donor|node)')
@@ -101,7 +106,7 @@ class Topo:
 
         node = Node()
         node.create_node(node_name, node_type, coordinate=coordinate)
-        self.topo_dict['node'][node_name] = node
+        self._topo_dict['node'][node_name] = node
 
         return node
 
@@ -113,28 +118,37 @@ class Topo:
             link_name (str): Link name 
             conflict_link (list): Conflict link name
         '''
-        link = self.topo_dict['link'][link]
+        
+        link = self._topo_dict['link'][link]
 
-        if link not in self.topo_dict['link'].values():
+        if link not in self._topo_dict['link'].values():
             raise ValueError(f'{link.name} not exist')
 
         for i, l in enumerate(conflict_link):
-            if l not in self.topo_dict['link'].keys():
+            if l not in self._topo_dict['link'].keys():
                 raise ValueError(f'{l.name} not exist')
             else:
-                conflict_link[i] = self.topo_dict['link'][l]
+                conflict_link[i] = self._topo_dict['link'][l]
 
         link.link_conflict += conflict_link
 
     # =======================
     # Find Path method
     # =======================
-    def find_path(self):
+    def find_path(self, node_dict):
         '''
         Find all path to node
+
+        Args:
+            node_list (list[obj]): The node object
+
+        return:
+            path_to_node (dict): The path to node
         '''
 
-        for node in self.topo_dict['node'].values():
+        self._topo_dict['node'] = node_dict
+
+        for node in self._topo_dict['node'].values():
             if node.type == 'donor':
                 donor = node
 
@@ -146,13 +160,12 @@ class Topo:
         # using stack
         traversed_node_stack = [donor]
 
-
         # use DFS to find the path to node
         while traversed_node_stack:
-            node = traversed_node_stack.pop()
+            node = traversed_node_stack.pop(0)
 
             for node_down in node.child_node:
-                if node_down not in path_to_node:
+                if node_down.name not in path_to_node:
                     path_to_node[node_down.name] = []
 
                 if node == donor:
@@ -164,35 +177,65 @@ class Topo:
 
                 traversed_node_stack.append(node_down)
 
+        return donor.path_to_node
+
     # =======================
-    # Random generate method
+    # Auto generate method
     # =======================
-    def random_generate(self, size=4, radiation_radius=2):
+    def auto_node_generate(self, size=4, radiation_radius=2, **kwargs):
         '''
-        Randomly generate the topo graph
+        Auto generate the node in topo graph
 
         Args:
             size (int): The size of the topo graph | default: 4 | min: 4
             radiation_radius (int): The radiation radius of the IAB node | default: ceil(sqrt(size))
+        
+        Returns:
+            node (list[obj]) : The node object
+            graph (list[list[int]]) : The topo graph
         '''
 
         assert size >= 4, 'Size must be greater than 4'
         assert radiation_radius >= 1, 'Radiation radius must be greater than 1'
 
-        self._topo_graph_generate(size, random=True)    # random generate topo graph
+        if kwargs == {}:
+            min_node_amount = ceil(sqrt(size))
+            max_node_amount = size // 2
+        else:
+            self._kwargs_arg_checker(kwargs, ['min_node_amount', 'max_node_amount'])
+            min_node_amount = kwargs['min_node_amount']
+            max_node_amount = kwargs['max_node_amount']
 
+    # random generate topo graph
+        self._topo_graph_generate(size, min_node_amount, max_node_amount, True)
         self._donor_generate()                          # generate IAB donor
         self._node_generate(size, radiation_radius)     # generate IAB node
-        self._topo_graph_generate(size)
+        self._topo_graph_generate(size)                 # regenerate topo graph'
+
+        return self._topo_dict['node'], self._topo_graph
+    
+    def auto_link_generate(self, node_dict):
+        '''
+        Generate the link in topo graph
+
+        Args:
+            node_dict (dict[obj]): The node object
+
+        Returns:
+            link (dict[obj]) : The link object
+        '''
+
+        self._topo_dict['node'] = node_dict
 
         self._link_generate()                # generate link
-        self._initialize_half_duplex_rule()  # initialize half duplex rule
-        self.find_path()                     # generate path to node
+        self._initialize_half_duplex_rule()
+
+        return self._topo_dict['link']
 
     # =======================
     # Generate method
     # =======================
-    def _topo_graph_generate(self, size, random=False):
+    def _topo_graph_generate(self, size, min_node_amount=None, max_node_amount=None, random=False):
         '''
         Generate the topo graph
 
@@ -200,18 +243,19 @@ class Topo:
             size (int): The size of the topo graph
             random (bool): Randomly generate the topo graph | default: False
         '''
-        self.topo_graph = [[0] * size] * size
+        self._topo_graph = []
 
         # if random is True, randomly generate the IAB node
         if random:
+            for _ in range(size):
+                self._topo_graph.append([0] * size)
+
             # position pool stores the possible position
             position_pool = [i for i in range(size)]
-            min_node_amount = ceil(sqrt(size))
-            max_node_amount = size // 2
 
             random_node_amount = randint(min_node_amount, max_node_amount)
 
-            for row in self.topo_graph:
+            for row in self._topo_graph:
                 shuffle(position_pool)
 
                 # 取position_pool中前random_node_amount個的位置給IAB node
@@ -220,29 +264,35 @@ class Topo:
 
         # if random is False, use the information in topo_dict to generate the IAB node
         else:
-            for node in self.topo_dict['node'].values():
-                self.topo_graph[node.coordinate['x']][node.coordinate['y']] = 1
+            for _ in range(size):
+                self._topo_graph.append(['0'] * size)
+
+            for node in self._topo_dict['node'].values():
+                if node.type == 'donor':
+                    self._topo_graph[node.coordinate['x']][node.coordinate['y']] = 'd'
+                else:
+                    self._topo_graph[node.coordinate['x']][node.coordinate['y']] = node.name
 
     def _donor_generate(self):
         '''
         Generate the IAB donor
         '''
 
-        nodes = self.topo_dict['node']
-        left = len(self.topo_graph[0]) // 4 * 1
-        right = len(self.topo_graph[0]) // 4 * 3
+        nodes = self._topo_dict['node']
+        left = len(self._topo_graph[0]) // 4 * 1
+        right = len(self._topo_graph[0]) // 4 * 3
 
         # generate IAB donor, from the midpoint to the end
         for i in range(left, right):
-            if self.topo_graph[0][i] == 1 and '0' in nodes:
-                self.topo_graph[0][i] = 0
+            if self._topo_graph[0][i] == 1 and '0' in nodes:
+                self._topo_graph[0][i] = 0
 
-            elif self.topo_graph[0][i] == 1 and '0' not in nodes:
+            elif self._topo_graph[0][i] == 1 and '0' not in nodes:
                 self.add_node('0', 'donor', coordinate={'x': 0, 'y': i})
 
         # if after midpoint has no IAB donor, create one
         if '0' not in nodes:
-            self.add_node('0', 'donor', coordinate={'x': 0, 'y': len(self.topo_graph[0]) // 2})
+            self.add_node('0', 'donor', coordinate={'x': 0, 'y': len(self._topo_graph[0]) // 2})
 
     def _node_generate(self, size, radiation_radius):
         '''
@@ -253,7 +303,7 @@ class Topo:
             radiation_radius (int): The radiation radius of the IAB node
         '''
 
-        nodes = self.topo_dict['node']
+        nodes = self._topo_dict['node']
         coordinate_exist = []
         node_idx = 0
 
@@ -267,11 +317,10 @@ class Topo:
             for coordinate in child_node_coordinate:
                 if coordinate in coordinate_exist:
                     coordinate_idx = coordinate_exist.index(coordinate) + 1
-                    child_node_name = nodes[str(coordinate_idx)]
+                    child_node = nodes[str(coordinate_idx)]
                 else:
                     child_node_name = str(len(nodes))
                     child_node = self.add_node(child_node_name, 'node', coordinate={'x': coordinate[0], 'y': coordinate[1]})
-                    
                     coordinate_exist.append(coordinate)
 
                 node.child_node.append(child_node)
@@ -283,7 +332,7 @@ class Topo:
         Generate the link
         '''
 
-        node_list = self.topo_dict['node']
+        node_list = self._topo_dict['node']
 
         for node_up in node_list.values():
             node_downs = node_up.child_node
@@ -313,7 +362,7 @@ class Topo:
 
         for i in range(x_min, x_max):
             for j in range(y_min, y_max):
-                if self.topo_graph[i][j] == 1:
+                if self._topo_graph[i][j] == 1:
                     child_node_coordinate.append([i, j])
 
         return child_node_coordinate
@@ -323,7 +372,7 @@ class Topo:
         Auto Initialize the half duplex rule to the topo
         '''
 
-        nodes = self.topo_dict['node'].values()
+        nodes = self._topo_dict['node'].values()
 
         for node in nodes:
             links = node.link['down'] + node.link['up']
@@ -351,28 +400,45 @@ class Topo:
             if arg not in kwargs:
                 raise ValueError(f'{arg} is required')
 
-    def __str__(self) -> str:
+    # =======================
+    # Get info method
+    # =======================
+    def get_all_info(self, graph, node_dict, link_dict):
+        '''
+        Print all the node and link information
+
+        Args:
+            node_list (list[obj]): The node object
+            link_list (list[obj]): The link object
+        '''
         info = ''
 
-        info += '---------------TOPO---------------\n\n'
-        nodes = self.topo_dict['node'].values()
+        self._topo_dict['node'] = node_dict
+        self._topo_dict['link'] = link_dict
+
+        info += '--------------GRAPH---------------\n\n'
+        for x in graph:
+            info += f'{x}\n'
+
+        info += '\n---------------TOPO---------------\n\n'
+        nodes = self._topo_dict['node'].values()
 
         for node in nodes:
             info += f'Node: {node.name}\n'
-            node = self.topo_dict['node'][node.name]
+            node = self._topo_dict['node'][node.name]
 
             for link in node.link['down']:
                 reserve_time_start = node.link_reserve_time[link.name]['start']
                 reserve_time_end = node.link_reserve_time[link.name]['end']
 
-                info += f'  Link: {link.name}' + \
-                        f' (Data Rate: {link.data_rate}' + \
-                        f', Link Conflict: {[l.name for l in link.link_conflict]}' + \
-                        f', Reservation Time: [{reserve_time_start}:{reserve_time_end}])\n'
+                info +=  f'  Link: {link.name}' + \
+                         f' (Data Rate: {link.data_rate}' + \
+                         f', Link Conflict: {[l.name for l in link.link_conflict]}' + \
+                         f', Reservation Time: [{reserve_time_start}:{reserve_time_end}])\n'
 
         info += '\n---------------PATH---------------\n\n'
 
-        for node in self.topo_dict['node'].values():
+        for node in self._topo_dict['node'].values():
             if node.type == 'donor':
                 donor = node
 
@@ -384,7 +450,7 @@ class Topo:
 
             info += f'link: {link} (Path: {path})\n'
 
-        info += '\n----------------------------------\n'
+        info += '\n----------------------------------'
 
         return info
 
@@ -449,6 +515,7 @@ class Node:
         Args:
             type (str): the type of the node
         '''
+
         if 'coordinate' in kwargs:
             self.coordinate = kwargs.pop('coordinate')
 
@@ -458,6 +525,7 @@ class Node:
         if type_ == 'donor':
             self.path_to_node = {}
 
+# not implement yet
 def __test_manual():
     topo = Topo()
 
@@ -495,15 +563,20 @@ def __test_manual():
 
 def __test_auto():
     topo = Topo()
-    topo.random_generate()
+    node_dict, graph = topo.auto_node_generate()
+    link_dict = topo.auto_link_generate(node_dict)
+    path_to_node = topo.find_path(node_dict)
 
-    for x in topo.topo_graph:
-        print(x)
-    print()
+    for node in node_dict.values():
+        if node.type == 'donor':
+            donor = node
+
+    donor.path_to_node = path_to_node
 
     # print(topo)
-    print(topo)
+    info = topo.get_all_info(graph, node_dict, link_dict)
+    print(info)
 
 if __name__ == '__main__':
-    __test_manual()
+    # __test_manual()
     __test_auto()
