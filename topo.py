@@ -1,7 +1,7 @@
 from random import randint, shuffle
 from math import sqrt, ceil
 
-__all__ = ['Topo.random_node_generate', 'Topo.link_generate', 'Topo.find_path', 'Topo.print_all']
+__all__ = ['Topo']
 
 '''
 todo:
