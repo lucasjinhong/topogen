@@ -40,13 +40,10 @@ class Topo:
 
         if kwargs != {}:
             self._kwargs_arg_checker(kwargs, arg_list)
-        
-        if node_up_name not in self._topo_dict['node']:
-            raise ValueError(f'{node_up_name} not exist')
-        if node_down_name not in self._topo_dict['node']:
-            raise ValueError(f'{node_down_name} not exist')
-        if self._topo_dict['node'][node_down_name].type == 'donor':
-            raise ValueError(f'{node_down_name} is donor, cannot be down node')
+
+        assert node_up_name in self._topo_dict['node'],                 f'{node_up_name} not exist'
+        assert node_down_name in self._topo_dict['node'],               f'{node_down_name} not exist'
+        assert self._topo_dict['node'][node_down_name].type != 'donor', f'{node_down_name} is donor, cannot be down node'
 
         link_name = f'{node_up_name}-{node_down_name}'
         node_up = self._topo_dict['node'][node_up_name]
@@ -91,16 +88,13 @@ class Topo:
         if kwargs != {}:
             self._kwargs_arg_checker(kwargs, args)
 
-        if node_name in self._topo_dict['node']:
-            raise ValueError(f'{node_name} already exist')
-        if node_type not in ['donor', 'node']:
-            raise ValueError(f'{node_type} is not a valid type, ex.(donor|node)')
+        assert node_name not in self._topo_dict['node'], f'{node_name} already exist'
+        assert node_type in ['donor', 'node'],           f'{node_type} is not a valid type, ex.(donor|node)'
+        assert node_type != 'donor' or node_name == '0',  'Donor must be 0'
 
         if 'coordinate' in kwargs:
             coordinate = kwargs.pop('coordinate')
-
-            if 'x' and 'y' not in coordinate:
-                raise ValueError('x and y is required for coordinate')
+            assert 'x' in coordinate and 'y' in coordinate, 'x and y is required for coordinate'
         else:
             coordinate = None
 
@@ -120,15 +114,11 @@ class Topo:
         '''
         
         link = self._topo_dict['link'][link]
-
-        if link not in self._topo_dict['link'].values():
-            raise ValueError(f'{link.name} not exist')
+        assert link in self._topo_dict['link'].values(), f'{link} not exist'
 
         for i, l in enumerate(conflict_link):
-            if l not in self._topo_dict['link'].keys():
-                raise ValueError(f'{l.name} not exist')
-            else:
-                conflict_link[i] = self._topo_dict['link'][l]
+            assert l in self._topo_dict['link'], f'{l} not exist'
+            conflict_link[i] = self._topo_dict['link'][l]
 
         link.link_conflict += conflict_link
 
@@ -148,13 +138,8 @@ class Topo:
 
         self._topo_dict['node'] = node_dict
 
-        for node in self._topo_dict['node'].values():
-            if node.type == 'donor':
-                donor = node
-
-        if donor is None:
-            raise ValueError('Donor not found')
-
+        assert node_dict['0'], 'Donor not found'
+        donor = node_dict['0']
         path_to_node = donor.path_to_node
 
         # using stack
@@ -397,8 +382,7 @@ class Topo:
         '''
 
         for arg in arg_list:
-            if arg not in kwargs:
-                raise ValueError(f'{arg} is required')
+            assert arg in kwargs, f'{arg} is required'
 
     # =======================
     # Get info method
@@ -438,9 +422,7 @@ class Topo:
 
         info += '\n---------------PATH---------------\n\n'
 
-        for node in self._topo_dict['node'].values():
-            if node.type == 'donor':
-                donor = node
+        donor = node_dict['0']
 
         for link, paths in donor.path_to_node.items():
             path = []
@@ -567,10 +549,7 @@ def __test_auto():
     link_dict = topo.auto_link_generate(node_dict)
     path_to_node = topo.find_path(node_dict)
 
-    for node in node_dict.values():
-        if node.type == 'donor':
-            donor = node
-
+    donor = node_dict['0']
     donor.path_to_node = path_to_node
 
     # print(topo)
