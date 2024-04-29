@@ -82,7 +82,7 @@ class Topo:
         assert node_name not in self._topo_dict['node'], f'{node_name} already exist'
         assert node_type in ['donor', 'node'],           f'{node_type} is not a valid type, ex.(donor|node)'
         assert node_type != 'donor' or node_name == '0',  'Donor must be 0'
-        assert self._topo_graph[coordinate['x']][coordinate['y']] == 1, 'Coordinate in use'
+        # assert self._topo_graph[coordinate['x']][coordinate['y']] == 1, 'Coordinate in use'
 
         node = Node()
         node.create_node(node_name, node_type, coordinate)
@@ -315,6 +315,7 @@ class Topo:
                     coordinate_exist.append(coordinate)
 
                 node.child_node.append(child_node)
+                node.packet['forward'][child_node.name] = []
 
             node_idx += 1
 
@@ -348,7 +349,7 @@ class Topo:
         x = coordinate.get('x')
         y = coordinate.get('y')
 
-        x_min, x_max = (max(x - radiation_radius, 0), min(size, x + radiation_radius))
+        x_min, x_max = (x + 1, min(size, x + radiation_radius))
         y_min, y_max = (max(0, y - (radiation_radius // 2)), min(size, y + (radiation_radius // 2) + 1))
         child_node_coordinate = []
 
@@ -471,9 +472,8 @@ class Node:
         #     },
         #     ...
         # }
-        # TODO: 把forward的封包分成以child node為key的dict
         self.packet = {
-            'forward': [],
+            'forward': {},
             'received': []
         }
 
