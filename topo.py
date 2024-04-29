@@ -3,19 +3,14 @@ from math import sqrt, ceil
 
 __all__ = ['Topo']
 
-'''
-todo:
-    1. 寫topo_graph中每一格所映射的單位
-    2. test_manual, 確定是否要直接讓user自己add node, link
-    3. donor隨機出現在任何一個位置，而node生成的的方式採用bfs graph生成
-'''
-
 class Topo:
     def __init__(self):
         self._topo_dict = {
             'node': {},
             'link': {}
         }
+
+        # TODO: 列出topo graph每一格的映射單位，即距離
         self._topo_graph = []
 
     # =======================
@@ -40,6 +35,9 @@ class Topo:
 
         if kwargs != {}:
             self._kwargs_arg_checker(kwargs, arg_list)
+            data_rate = kwargs['data_rate']
+        else:
+            data_rate = randint(1, 10)
 
         assert node_up_name in self._topo_dict['node'],                 f'{node_up_name} not exist'
         assert node_down_name in self._topo_dict['node'],               f'{node_down_name} not exist'
@@ -53,7 +51,7 @@ class Topo:
             node_up.child_node.append(node_down)
 
         link = Link()
-        link.create_link(link_name, node_up, node_down, **kwargs)
+        link.create_link(link_name, node_up, node_down, data_rate)
 
         node_up.link['down'].append(link)
         node_down.link['up'].append(link)
@@ -67,39 +65,27 @@ class Topo:
 
         return link
 
-    def add_node(self, node_name, node_type, **kwargs):
+    def add_node(self, node_name, node_type, coordinate):
         '''
         Add node into topo
 
         Args:
             name (str): Node name
             type (str): Node type (IAB donor or IAB node)
-
-            advanced:
-                coordinate (dict): Coordinate of the node
-                {'x': int, 'y': int}
+            coordinate (dict): Coordinate of the node
+            {'x': int, 'y': int}
 
         Returns:
             node (obj): Node object
         '''
 
-        args = ['coordinate']
-
-        if kwargs != {}:
-            self._kwargs_arg_checker(kwargs, args)
-
         assert node_name not in self._topo_dict['node'], f'{node_name} already exist'
         assert node_type in ['donor', 'node'],           f'{node_type} is not a valid type, ex.(donor|node)'
         assert node_type != 'donor' or node_name == '0',  'Donor must be 0'
-
-        if 'coordinate' in kwargs:
-            coordinate = kwargs.pop('coordinate')
-            assert 'x' in coordinate and 'y' in coordinate, 'x and y is required for coordinate'
-        else:
-            coordinate = None
+        assert self._topo_graph[coordinate['x']][coordinate['y']] == 1, 'Coordinate in use'
 
         node = Node()
-        node.create_node(node_name, node_type, coordinate=coordinate)
+        node.create_node(node_name, node_type, coordinate)
         self._topo_dict['node'][node_name] = node
 
         return node
@@ -345,6 +331,7 @@ class Topo:
             for node_down in node_downs:
                 self.add_link(node_up.name, node_down.name)
 
+    # TODO: use bfs graph to find the child node
     def _find_child_node_coordinate(self, coordinate, size, radiation_radius):
         '''
         Find the child node coordinate
@@ -361,7 +348,7 @@ class Topo:
         x = coordinate.get('x')
         y = coordinate.get('y')
 
-        x_min, x_max = (x + 1, min(size, x + radiation_radius))
+        x_min, x_max = (max(x - radiation_radius, 0), min(size, x + radiation_radius))
         y_min, y_max = (max(0, y - (radiation_radius // 2)), min(size, y + (radiation_radius // 2) + 1))
         child_node_coordinate = []
 
@@ -450,7 +437,7 @@ class Link:
         }
         self.link_conflict = []
 
-    def create_link(self, name, node_up, node_down, data_rate=None):
+    def create_link(self, name, node_up, node_down, data_rate):
         '''
         insert the link information
 
@@ -465,12 +452,7 @@ class Link:
         self.node['up'] = node_up
         self.node['down'] = node_down
         self.name = name
-
-        if data_rate is not None:
-            self.data_rate = data_rate
-        else:
-            # 之後引入data rate的計算方式
-            self.data_rate = randint(5, 10)
+        self.data_rate = data_rate
 
 class Node:
     def __init__(self):
@@ -489,22 +471,23 @@ class Node:
         #     },
         #     ...
         # }
+        # TODO: 把forward的封包分成以child node為key的dict
         self.packet = {
             'forward': [],
             'received': []
         }
 
-    def create_node(self, name, type_, **kwargs):
+    def create_node(self, name, type_, coordinate):
         '''
         insert the node information
 
         Args:
-            type (str): the type of the node
+            name (str): the name of the node
+            type_ (str): the type of the node
+            coordinate (dict): the coordinate of the node
         '''
 
-        if 'coordinate' in kwargs:
-            self.coordinate = kwargs.pop('coordinate')
-
+        self.coordinate = coordinate
         self.type = type_
         self.name = name
 
@@ -575,5 +558,5 @@ def __test_auto():
     print('===============End================')
 
 if __name__ == '__main__':
-    __test_manual()
+    # __test_manual()
     __test_auto()
