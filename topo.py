@@ -25,19 +25,13 @@ class Topo:
             node_down_name (str): Node down
 
             advanced:
-                data rate (int): Data rate | default: random
+                data_rate_function (function): The data rate function
 
         Returns:
             link (obj): Link object
         '''
 
-        arg_list = ['data_rate']
-
-        if kwargs != {}:
-            self._kwargs_arg_checker(kwargs, arg_list)
-            data_rate = kwargs['data_rate']
-        else:
-            data_rate = randint(1, 10)
+        arg_list = ['data_rate_function']
 
         assert node_up_name in self._topo_dict['node'],                 f'{node_up_name} not exist'
         assert node_down_name in self._topo_dict['node'],               f'{node_down_name} not exist'
@@ -46,6 +40,14 @@ class Topo:
         link_name = f'{node_up_name}-{node_down_name}'
         node_up = self._topo_dict['node'][node_up_name]
         node_down = self._topo_dict['node'][node_down_name]
+
+        child_node_distance = node_up.child_node_distance[node_down_name]
+
+        if kwargs != {}:
+            self._kwargs_arg_checker(kwargs, arg_list)
+            data_rate = kwargs['data_rate_function'](int(child_node_distance))
+        else:
+            data_rate = randint(1, 10)
 
         if node_down not in node_up.child_node:
             node_up.child_node.append(node_down)
@@ -180,6 +182,11 @@ class Topo:
         Args:
             size (int): The size of the topo graph | default: 4 | min: 4
             radiation_radius (int): The radiation radius of the IAB node | default: ceil(sqrt(size))
+
+            advanced:
+                min_node_amount (int): The min node amount in each row | default: ceil(sqrt(size))
+                max_node_amount (int): The max node amount in each row | default: size // 2
+                distance_corresponding (dict): The distance corresponding | default: 10
         
         Returns:
             node (list[obj]) : The node object
@@ -189,13 +196,15 @@ class Topo:
         assert size >= 4, 'Size must be greater than 4'
         assert radiation_radius >= 1, 'Radiation radius must be greater than 1'
 
-        if kwargs == {}:
-            min_node_amount = ceil(sqrt(size))
-            max_node_amount = size // 2
-        else:
-            self._kwargs_arg_checker(kwargs, ['min_node_amount', 'max_node_amount'])
-            min_node_amount = kwargs['min_node_amount']
-            max_node_amount = kwargs['max_node_amount']
+        self._kwargs_arg_checker(kwargs, ['min_node_amount', 'max_node_amount', 'distance_corresponding'])
+
+        min_node_amount = ceil(sqrt(size))
+        max_node_amount = size // 2
+        distance_corresponding = 10
+
+        if kwargs.get('min_node_amount'): min_node_amount = kwargs['min_node_amount']
+        if kwargs.get('max_node_amount'): max_node_amount = kwargs['max_node_amount']
+        if kwargs.get('distance_corresponding'): distance_corresponding = kwargs['distance_corresponding']
 
     # random generate topo graph
         self._topo_graph_generate(size, min_node_amount, max_node_amount, True)
@@ -203,14 +212,18 @@ class Topo:
         self._node_generate(size, radiation_radius)     # generate IAB node
         self._topo_graph_generate(size)                 # regenerate topo graph'
 
+        for node in self._topo_dict['node'].values():
+            self._child_node_distance_calculate(node, distance_corresponding)
+
         return self._topo_dict['node'], self._topo_graph
     
-    def auto_link_generate(self, node_dict):
+    def auto_link_generate(self, node_dict, data_rate_function=None):
         '''
         Generate the link in topo graph
 
         Args:
             node_dict (dict[obj]): The node object
+            data_rate_function (function): The data rate function
 
         Returns:
             link (dict[obj]) : The link object
@@ -218,7 +231,7 @@ class Topo:
 
         self._topo_dict['node'] = node_dict
 
-        self._link_generate()                # generate link
+        self._link_generate(data_rate_function)                # generate link
         self.initialize_half_duplex_rule(self._topo_dict['node'])
 
         return self._topo_dict['link']
@@ -319,7 +332,7 @@ class Topo:
 
             node_idx += 1
 
-    def _link_generate(self):
+    def _link_generate(self, data_rate_function):
         '''
         Generate the link
         '''
@@ -330,7 +343,7 @@ class Topo:
             node_downs = node_up.child_node
 
             for node_down in node_downs:
-                self.add_link(node_up.name, node_down.name)
+                self.add_link(node_up.name, node_down.name, data_rate_function=data_rate_function)
 
     # TODO: use bfs graph to find the child node
     def _find_child_node_coordinate(self, coordinate, size, radiation_radius):
@@ -360,6 +373,11 @@ class Topo:
 
         return child_node_coordinate
 
+    def _child_node_distance_calculate(self, node, distance_corresponding):
+        for child_node in node.child_node:
+            distance = sqrt((node.coordinate['x'] - child_node.coordinate['x']) ** 2 + (node.coordinate['y'] - child_node.coordinate['y']) ** 2)
+            node.child_node_distance[child_node.name] = distance * distance_corresponding
+
     # =======================
     # Function
     # =======================
@@ -372,8 +390,8 @@ class Topo:
             arg_list (list): The arg list
         '''
 
-        for arg in arg_list:
-            assert arg in kwargs, f'{arg} is required'
+        for kwarg in kwargs:
+            assert kwarg in arg_list, f'{kwarg} is not a valid argument'
 
     # =======================
     # Get info method
@@ -460,6 +478,7 @@ class Node:
         self.name = None
         self.type = None
         self.child_node = []
+        self.child_node_distance = {}
         self.link = {
             'up': [],
             'down': []
@@ -543,9 +562,11 @@ def __test_manual():
 def __test_auto():
     print('\n============Test auto=============')
 
+    link_data_rate_function = lambda x: randint(1, x)
+
     topo = Topo()
-    node_dict, graph = topo.auto_node_generate()
-    link_dict = topo.auto_link_generate(node_dict)
+    node_dict, graph = topo.auto_node_generate(distance_corresponding=10)
+    link_dict = topo.auto_link_generate(node_dict, link_data_rate_function)
     path_to_node = topo.find_path(node_dict)
 
     donor = node_dict['0']
