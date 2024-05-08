@@ -1,5 +1,5 @@
-from ..model.link import Link
-from ..model.node import Node
+from model.link import Link
+from model.node import Node
 
 
 def add_link(node_up, node_down, data_rate_function):
