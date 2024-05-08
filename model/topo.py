@@ -1,7 +1,7 @@
 from math import sqrt
 from random import shuffle, randint
 
-from utils.function import add_node, add_link
+from ..utils.function import add_node, add_link
 
 class Topo:
     def __init__(self):
