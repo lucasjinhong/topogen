@@ -16,7 +16,7 @@ class Topo:
     # =======================
     # Generate method
     # =======================
-    def topo_graph_generate(self, size, min_node_amount=None, max_node_amount=None, random=False):
+    def topo_graph_generate(self, size, min_node_amount=None, max_node_amount=None, random=False, topo_graph=None):
         '''
         Generate the topo graph
 
@@ -43,6 +43,11 @@ class Topo:
                     row[position] = '1'
 
         # if random is False, use the information in topo_dict to generate the IAB node
+        elif topo_graph:
+            for i in range(size):
+                for j in range(size):
+                    if topo_graph[i][j] != '0':
+                        self.topo_graph[i][j] = '1'
         else:
             for node in self.topo_dict['node'].values():
                 x, y = node.coordinate['x'], node.coordinate['y']
