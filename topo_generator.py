@@ -50,7 +50,7 @@ def generate_topo_automatically(
         min_node_amount = None,
         max_node_amount = None,
         size = 4,
-        radiation_radius = 2,
+        radiation_radius = 1,
         topo_graph = None,
         tree_type = 'DAG',
         distance_corresponding = 10,

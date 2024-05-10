@@ -27,7 +27,13 @@ class Topo:
         self.topo_graph = [['0'] * size for _ in range(size)]
 
         # if random is True, randomly generate the IAB node
-        if random:
+        if topo_graph:
+            for i in range(size):
+                for j in range(size):
+                    if topo_graph[i][j] != '0':
+                        self.topo_graph[i][j] = '1'
+
+        elif random:
             if min_node_amount is None or max_node_amount is None:
                 raise ValueError("min_node_amount and max_node_amount must be provided when random is True")
 
@@ -136,8 +142,10 @@ class Topo:
         x = coordinate.get('x')
         y = coordinate.get('y')
 
-        x_min, x_max = (x + 1, min(size, x + radiation_radius))
-        y_min, y_max = (max(0, y - (radiation_radius // 2)), min(size, y + (radiation_radius // 2) + 1))
+        x_min, x_max = (x + 1, min(size, x + radiation_radius + 1))
+        y_min, y_max = (max(0, y - radiation_radius), min(size, y + radiation_radius + 1))
+
+        print(y_min, y, y_max)
 
         child_node_coordinate = [[i, j] for i in range(x_min, x_max) for j in range(y_min, y_max) if self.topo_graph[i][j] == '1']
 
