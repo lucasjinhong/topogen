@@ -50,7 +50,7 @@ def generate_topo_automatically(
         min_node_amount = None,
         max_node_amount = None,
         size = 4,
-        radiation_radius = 2,
+        radiation_radius = 1,
         topo_graph = None,
         tree_type = 'DAG',
         distance_corresponding = 10,
@@ -84,17 +84,7 @@ def generate_topo_automatically(
     # random generate topo graph
     TOPO = Topo()
 
-    if not topo_graph:
-        TOPO.topo_graph_generate(size, min_node_amount, max_node_amount, True)
-    else:
-        TOPO.topo_graph = topo_graph
-
-        # replace the none '0' value to '1'
-        for row in topo_graph:
-            for i in range(len(row)):
-                if row[i] != '0':
-                    row[i] = '1'
-
+    TOPO.topo_graph_generate(size, min_node_amount, max_node_amount, True, topo_graph)
     TOPO.donor_generate()                                     # generate IAB donor
     TOPO.node_generate(size, radiation_radius, tree_type)     # generate IAB node
     TOPO.topo_graph_generate(size)                            # regenerate topo graph'
