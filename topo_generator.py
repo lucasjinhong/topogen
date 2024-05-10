@@ -32,15 +32,15 @@ def find_path(node_dict):
         node = traversed_node_stack.popleft()
 
         for node_down in node.child_node:
-            if node_down.name not in path_to_node:
-                path_to_node[node_down.name] = []
+            node_down_paths = path_to_node.setdefault(node_down.name, [])
 
             if node == donor:
-                path_to_node[node_down.name].append([donor, node_down])
+                node_down_paths.append([donor, node_down])
             else:
                 for path in path_to_node[node.name]:
-                    if path + [node_down] not in path_to_node[node_down.name]:
-                        path_to_node[node_down.name].append(path + [node_down])
+                    new_path = path + [node_down]
+                    if new_path not in node_down_paths:
+                        node_down_paths.append(new_path)
 
             traversed_node_stack.append(node_down)
 

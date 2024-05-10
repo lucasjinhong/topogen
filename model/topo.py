@@ -140,8 +140,6 @@ class Topo:
         x_min, x_max = (x + 1, min(size, x + radiation_radius + 1))
         y_min, y_max = (max(0, y - radiation_radius), min(size, y + radiation_radius + 1))
 
-        print(y_min, y, y_max)
-
         child_node_coordinate = [[i, j] for i in range(x_min, x_max) for j in range(y_min, y_max) if self.topo_graph[i][j] == '1']
 
         return child_node_coordinate
