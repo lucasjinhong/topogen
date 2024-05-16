@@ -2,7 +2,7 @@ from model.link import Link
 from model.node import Node
 
 
-def add_link(node_up, node_down, data_rate_function):
+def add_link(node_up, node_down, data_rate):
     '''
     Add link into topo
 
@@ -22,12 +22,16 @@ def add_link(node_up, node_down, data_rate_function):
 
     link_name = f'{node_up.name}-{node_down.name}'
     child_node_distance = node_up.child_node_distance[node_down.name]
-    data_rate = data_rate_function(int(child_node_distance))
+
+    if type(data_rate) == int:
+        link_rate = data_rate
+    else:
+        link_rate = data_rate(int(child_node_distance))
 
     if node_down not in set(node_up.child_node):
         node_up.child_node.append(node_down)
 
-    link = Link(link_name, node_up, node_down, data_rate)
+    link = Link(link_name, node_up, node_down, link_rate)
 
     node_up.link['down'].append(link)
     node_down.link['up'].append(link)

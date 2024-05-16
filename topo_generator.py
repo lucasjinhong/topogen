@@ -53,8 +53,8 @@ def generate_topo_automatically(
         radiation_radius = 1,
         topo_graph = None,
         tree_type = 'DAG',
-        distance_corresponding = 10,
-        data_rate_function = None
+        distance_corresponding = None,
+        data_rate = None
     ):
     '''
     Auto generate the node in topo graph
@@ -74,7 +74,8 @@ def generate_topo_automatically(
 
     if not min_node_amount: min_node_amount = ceil(sqrt(size))
     if not max_node_amount: max_node_amount = size // 2
-    if not data_rate_function: data_rate_function = randint(1, 10)
+    if not data_rate: data_rate = randint(1, 10)
+    if not distance_corresponding: distance_corresponding = 10
 
     if size < 4: raise ValueError('Size must be greater than 4')
     elif radiation_radius < 1: raise ValueError('Radiation radius must be greater than 1')
@@ -92,7 +93,7 @@ def generate_topo_automatically(
     for node in TOPO.topo_dict['node'].values():
         TOPO.child_node_distance_calculate(node, distance_corresponding)
 
-    TOPO.link_generate(data_rate_function)                        # generate link
+    TOPO.link_generate(data_rate)                        # generate link
     implement_half_duplex_rule(TOPO.topo_dict['node'])
     find_path(TOPO.topo_dict['node'])
 
@@ -169,8 +170,8 @@ def __test_auto():
         'link': {}
     }
 
-    topo_dict_dag, topo_graph_dag = generate_topo_automatically(data_rate_function=data_rate_function)
-    topo_dict_tree, topo_graph_tree = generate_topo_automatically(tree_type='TREE', topo_graph=topo_graph_dag, data_rate_function=data_rate_function)
+    topo_dict_dag, topo_graph_dag = generate_topo_automatically(distance_corresponding=lambda: 200)
+    topo_dict_tree, topo_graph_tree = generate_topo_automatically(tree_type='TREE', topo_graph=topo_graph_dag, data_rate=data_rate_function)
 
     # print(topo)
     info_dag = get_all_info(topo_dict_dag['node'], topo_graph_dag)

@@ -111,14 +111,14 @@ class Topo:
 
             node_idx += 1
 
-    def link_generate(self, data_rate_function):
+    def link_generate(self, data_rate):
         '''
         Generate the link
         '''
 
         for node_up in self.topo_dict['node'].values():
             for node_down in node_up.child_node:
-                self.topo_dict['link'][f'{node_up.name}-{node_down.name}'] = add_link(node_up, node_down, data_rate_function)
+                self.topo_dict['link'][f'{node_up.name}-{node_down.name}'] = add_link(node_up, node_down, data_rate)
 
     # TODO: use bfs graph to find the child node
     def find_child_node_coordinate(self, coordinate, size, radiation_radius):
@@ -155,4 +155,8 @@ class Topo:
 
         for child_node in node.child_node:
             distance = sqrt((node.coordinate['x'] - child_node.coordinate['x']) ** 2 + (node.coordinate['y'] - child_node.coordinate['y']) ** 2)
-            node.child_node_distance[child_node.name] = distance * distance_corresponding
+
+            if type(distance_corresponding) == int:
+                node.child_node_distance[child_node.name] = distance * distance_corresponding
+            else:
+                node.child_node_distance[child_node.name] = distance * distance_corresponding()
