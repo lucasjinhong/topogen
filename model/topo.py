@@ -4,6 +4,12 @@ from random import shuffle, randint
 from utils.function import add_node, add_link
 
 class Topo:
+    '''
+    The Topo class
+    '''
+
+    __slots__ = ['topo_dict', 'topo_graph']
+
     def __init__(self):
         self.topo_dict = {
             'node': {},

@@ -1,6 +1,7 @@
 from random import randint
 from math import ceil, sqrt, log10
 from collections import deque
+import time
 
 from utils.function import implement_half_duplex_rule
 from model.topo import Topo

@@ -2,6 +2,7 @@ class Link:
     '''
     Represent a link in the topology.
     '''
+    __slots__ = ['name', 'data_rate', 'node', 'link_conflict']
 
     def __init__(self, name, node_up, node_down, data_rate):
         '''
