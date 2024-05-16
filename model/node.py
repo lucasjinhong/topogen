@@ -2,6 +2,7 @@ class Node:
     '''
     Represent a node in the topology.
     '''
+    __slots__ = ['name', 'type', 'coordinate', 'child_node', 'child_node_distance', 'link', 'link_reserve_time', 'packet', 'path_to_node']
 
     def __init__(self, name, type_, coordinate):
         '''
