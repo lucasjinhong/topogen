@@ -126,25 +126,20 @@ def get_all_info(node_dict, graph = None):
         node = node_dict[node.name]
 
         for link in node.link['down']:
-            reserve_time_start = node.link_reserve_time[link.name]['start']
-            reserve_time_end = node.link_reserve_time[link.name]['end']
-
             info +=  f'  Link: {link.name}' + \
-                        f' (Data Rate: {link.data_rate}' + \
-                        f', Link Conflict: {[l.name for l in link.link_conflict]}' + \
-                        f', Reservation Time: [{reserve_time_start}:{reserve_time_end}])\n'
+                     f' (Data Rate: {link.data_rate})\n'
 
-    info += '\n---------------PATH---------------\n\n'
+    # info += '\n---------------PATH---------------\n\n'
 
-    donor = node_dict['0']
+    # donor = node_dict['0']
 
-    for link, paths in donor.path_to_node.items():
-        path = []
+    # for link, paths in donor.path_to_node.items():
+    #     path = []
 
-        for p in paths:
-            path.append([n.name for n in p])
+    #     for p in paths:
+    #         path.append([n.name for n in p])
 
-        info += f'link: {link} (Path: {path})\n'
+    #     info += f'link: {link} (Path: {path})\n'
 
     info += '\n----------------------------------'
 
