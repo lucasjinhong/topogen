@@ -34,15 +34,15 @@ def find_path(node_dict):
 
         for node_down in node.child_node:
             node_down_paths = path_to_node.setdefault(node_down.name, [])
+            node_down_paths_set = set(map(str, node_down_paths))
 
             if node == donor:
-                node_down_paths.append([donor, node_down])
+                new_paths = [[node, node_down]]
             else:
-                for path in path_to_node[node.name]:
-                    new_path = path + [node_down]
-                    if new_path not in node_down_paths:
-                        node_down_paths.append(new_path)
+                new_paths = [path + [node_down] for path in path_to_node[node.name]]
+                new_paths = [new_path for new_path in new_paths if str(new_path) not in node_down_paths_set]
 
+            node_down_paths.extend(new_paths)
             traversed_node_stack.append(node_down)
 
     return donor.path_to_node
@@ -50,8 +50,8 @@ def find_path(node_dict):
 def generate_topo_automatically(
         min_node_amount = None,
         max_node_amount = None,
-        size = 4,
-        radiation_radius = 1,
+        size = 9,
+        radiation_radius = 2,
         topo_graph = None,
         tree_type = 'DAG',
         distance_corresponding = None,
@@ -129,19 +129,20 @@ def get_all_info(node_dict, graph = None):
             info +=  f'  Link: {link.name}' + \
                      f' (Data Rate: {link.data_rate})\n'
 
-    # info += '\n---------------PATH---------------\n\n'
+    if __name__ == '__main__':
+        info += '\n---------------PATH---------------\n\n'
 
-    # donor = node_dict['0']
+        donor = node_dict['0']
 
-    # for link, paths in donor.path_to_node.items():
-    #     path = []
+        for link, paths in donor.path_to_node.items():
+            path = []
 
-    #     for p in paths:
-    #         path.append([n.name for n in p])
+            for p in paths:
+                path.append([n.name for n in p])
 
-    #     info += f'link: {link} (Path: {path})\n'
+            info += f'link: {link} (Path: {path})\n'
 
-    info += '\n----------------------------------'
+        info += '\n----------------------------------'
 
     return info
 
