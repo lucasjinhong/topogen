@@ -3,7 +3,7 @@ from math import ceil, sqrt, log10
 from collections import deque
 import time
 
-from .utils.function import implement_half_duplex_rule
+from .utils.function import implement_half_duplex_rule, add_node, add_link
 from .model.topo import Topo
 
 
@@ -149,6 +149,26 @@ def get_all_info(node_dict, graph = None):
 # not implement yet
 def __test_manual():
     print('===========Test manual============')
+
+    topo_dict = {
+        'node': {},
+        'link': {}
+    }
+
+    donor = add_node('0', 'donor')
+    node_1 = add_node('1', 'node')
+
+    topo_dict['node']['0'] = donor
+    topo_dict['node']['1'] = node_1
+
+    donor.child_node.append(node_1)
+
+    link_01 = add_link(donor, node_1, 10)
+    topo_dict['link']['0-1'] = link_01
+
+    find_path(topo_dict['node'])
+    print(get_all_info(topo_dict['node']))    
+
     print('===============End================')
 
 def __test_auto():
@@ -179,5 +199,5 @@ def __test_auto():
     print('===============End================')
 
 if __name__ == '__main__':
-    # __test_manual()
+    __test_manual()
     __test_auto()
