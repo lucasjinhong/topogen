@@ -20,7 +20,7 @@ def add_link(node_up, node_down, data_rate):
     if node_down.type == 'donor':
         raise ValueError(f'{node_down} is donor, cannot be down node')
 
-    link_name = f'{node_up.name}-{node_down.name}'
+    link_name = (node_up.name, node_down.name)
 
     if type(data_rate) == int:
         link_rate = data_rate

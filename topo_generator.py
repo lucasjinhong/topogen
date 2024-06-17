@@ -134,13 +134,13 @@ def get_all_info(node_dict, graph = None):
 
         donor = node_dict['0']
 
-        for link, paths in donor.path_to_node.items():
+        for node, paths in donor.path_to_node.items():
             path = []
 
             for p in paths:
                 path.append([n.name for n in p])
 
-            info += f'link: {link} (Path: {path})\n'
+            info += f'Node: {node} (Path: {path})\n'
 
         info += '\n----------------------------------'
 
