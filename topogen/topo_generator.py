@@ -21,7 +21,7 @@ from model.topo import generate_topo, get_topo_info
 #     topo_dict['link']['0-1'] = link_01
 
 #     find_path(topo_dict['node'])
-#     print(get_all_info(topo_dict['node']))    
+#     print(get_all_info(topo_dict['node']))
 
 #     print('===============End================')
 
