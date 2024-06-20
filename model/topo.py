@@ -4,6 +4,12 @@ from random import shuffle, randint
 from ..utils.function import add_node, add_link
 
 class Topo:
+    '''
+    The Topo class
+    '''
+
+    __slots__ = ['topo_dict', 'topo_graph']
+
     def __init__(self):
         self.topo_dict = {
             'node': {},
@@ -16,7 +22,7 @@ class Topo:
     # =======================
     # Generate method
     # =======================
-    def topo_graph_generate(self, size, min_node_amount=None, max_node_amount=None, random=False):
+    def topo_graph_generate(self, size, min_node_amount=None, max_node_amount=None, random=False, topo_graph=None):
         '''
         Generate the topo graph
 
@@ -27,7 +33,13 @@ class Topo:
         self.topo_graph = [['0'] * size for _ in range(size)]
 
         # if random is True, randomly generate the IAB node
-        if random:
+        if topo_graph:
+            for i in range(size):
+                for j in range(size):
+                    if topo_graph[i][j] != '0':
+                        self.topo_graph[i][j] = '1'
+
+        elif random:
             if min_node_amount is None or max_node_amount is None:
                 raise ValueError("min_node_amount and max_node_amount must be provided when random is True")
 
@@ -43,6 +55,11 @@ class Topo:
                     row[position] = '1'
 
         # if random is False, use the information in topo_dict to generate the IAB node
+        elif topo_graph:
+            for i in range(size):
+                for j in range(size):
+                    if topo_graph[i][j] != '0':
+                        self.topo_graph[i][j] = '1'
         else:
             for node in self.topo_dict['node'].values():
                 x, y = node.coordinate['x'], node.coordinate['y']
@@ -105,14 +122,14 @@ class Topo:
 
             node_idx += 1
 
-    def link_generate(self, data_rate_function):
+    def link_generate(self, data_rate):
         '''
         Generate the link
         '''
 
         for node_up in self.topo_dict['node'].values():
             for node_down in node_up.child_node:
-                self.topo_dict['link'][f'{node_up.name}-{node_down.name}'] = add_link(node_up, node_down, data_rate_function)
+                self.topo_dict['link'][(node_up.name, node_down.name)] = add_link(node_up, node_down, data_rate)
 
     # TODO: use bfs graph to find the child node
     def find_child_node_coordinate(self, coordinate, size, radiation_radius):
@@ -131,8 +148,8 @@ class Topo:
         x = coordinate.get('x')
         y = coordinate.get('y')
 
-        x_min, x_max = (x + 1, min(size, x + radiation_radius))
-        y_min, y_max = (max(0, y - (radiation_radius // 2)), min(size, y + (radiation_radius // 2) + 1))
+        x_min, x_max = (x + 1, min(size, x + radiation_radius + 1))
+        y_min, y_max = (max(0, y - radiation_radius), min(size, y + radiation_radius + 1))
 
         child_node_coordinate = [[i, j] for i in range(x_min, x_max) for j in range(y_min, y_max) if self.topo_graph[i][j] == '1']
 
@@ -149,4 +166,8 @@ class Topo:
 
         for child_node in node.child_node:
             distance = sqrt((node.coordinate['x'] - child_node.coordinate['x']) ** 2 + (node.coordinate['y'] - child_node.coordinate['y']) ** 2)
-            node.child_node_distance[child_node.name] = distance * distance_corresponding
+
+            if type(distance_corresponding) == int:
+                node.child_node_distance[child_node.name] = distance * distance_corresponding
+            else:
+                node.child_node_distance[child_node.name] = distance * distance_corresponding()

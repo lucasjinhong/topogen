@@ -1,12 +1,11 @@
 from random import randint
 from math import ceil, sqrt, log10
 from collections import deque
+import time
 
-from .utils.function import implement_half_duplex_rule
+from .utils.function import implement_half_duplex_rule, add_node, add_link
 from .model.topo import Topo
 
-
-TOPO = Topo()
 
 # =======================
 # Auto generate method
@@ -34,27 +33,29 @@ def find_path(node_dict):
         node = traversed_node_stack.popleft()
 
         for node_down in node.child_node:
-            if node_down.name not in path_to_node:
-                path_to_node[node_down.name] = []
+            node_down_paths = path_to_node.setdefault(node_down.name, [])
+            node_down_paths_set = set(map(str, node_down_paths))
 
             if node == donor:
-                path_to_node[node_down.name].append([donor, node_down])
+                new_paths = [[node, node_down]]
             else:
-                for path in path_to_node[node.name]:
-                    if path + [node_down] not in path_to_node[node_down.name]:
-                        path_to_node[node_down.name].append(path + [node_down])
+                new_paths = [path + [node_down] for path in path_to_node[node.name]]
+                new_paths = [new_path for new_path in new_paths if str(new_path) not in node_down_paths_set]
 
+            node_down_paths.extend(new_paths)
             traversed_node_stack.append(node_down)
 
     return donor.path_to_node
 
-def generate_node_automatically(
+def generate_topo_automatically(
         min_node_amount = None,
         max_node_amount = None,
-        size = 4,
+        size = 9,
         radiation_radius = 2,
-        distance_corresponding = 10,
-        tree_type = 'DAG'
+        topo_graph = None,
+        tree_type = 'DAG',
+        distance_corresponding = None,
+        data_rate = None
     ):
     '''
     Auto generate the node in topo graph
@@ -66,13 +67,16 @@ def generate_node_automatically(
         radiation_radius (int): The radiation radius of the IAB node | default: 2
         distance_corresponding (dict): The distance corresponding | default: 10
         tree_type (str): The tree type | default: 'DAG'
+        data_rate_function (function): The data rate function | default: randint(1, 10)
     Returns:
-        node (list[obj]) : The node object
+        topo_dict (dict[obj]) : The node object
         graph (list[list[int]]) : The topo graph
     '''
 
     if not min_node_amount: min_node_amount = ceil(sqrt(size))
     if not max_node_amount: max_node_amount = size // 2
+    if not data_rate: data_rate = randint(1, 10)
+    if not distance_corresponding: distance_corresponding = 10
 
     if size < 4: raise ValueError('Size must be greater than 4')
     elif radiation_radius < 1: raise ValueError('Radiation radius must be greater than 1')
@@ -80,8 +84,9 @@ def generate_node_automatically(
     elif tree_type not in ['DAG', 'TREE']: raise ValueError(f"tree_type must be 'DAG' or 'TREE', not {tree_type}")
 
     # random generate topo graph
+    TOPO = Topo()
 
-    TOPO.topo_graph_generate(size, min_node_amount, max_node_amount, True)
+    TOPO.topo_graph_generate(size, min_node_amount, max_node_amount, True, topo_graph)
     TOPO.donor_generate()                                     # generate IAB donor
     TOPO.node_generate(size, radiation_radius, tree_type)     # generate IAB node
     TOPO.topo_graph_generate(size)                            # regenerate topo graph'
@@ -89,28 +94,11 @@ def generate_node_automatically(
     for node in TOPO.topo_dict['node'].values():
         TOPO.child_node_distance_calculate(node, distance_corresponding)
 
-    return TOPO.topo_dict['node'], TOPO.topo_graph
-
-def generate_link_automatically(node_dict, data_rate_function=None):
-    '''
-    Generate the link in topo graph
-
-    Args:
-        node_dict (dict[obj]): The node object
-        data_rate_function (function): The data rate function
-
-    Returns:
-        link (dict[obj]) : The link object
-    '''
-
-    if not data_rate_function:
-        data_rate_function = randint(1, 10)
-
-    TOPO.topo_dict['node'] = node_dict
-    TOPO.link_generate(data_rate_function)                # generate link
+    TOPO.link_generate(data_rate)                        # generate link
     implement_half_duplex_rule(TOPO.topo_dict['node'])
+    find_path(TOPO.topo_dict['node'])
 
-    return TOPO.topo_dict['link']
+    return TOPO.topo_dict, TOPO.topo_graph
 
 # =======================
 # Get info method
@@ -138,27 +126,23 @@ def get_all_info(node_dict, graph = None):
         node = node_dict[node.name]
 
         for link in node.link['down']:
-            reserve_time_start = node.link_reserve_time[link.name]['start']
-            reserve_time_end = node.link_reserve_time[link.name]['end']
-
             info +=  f'  Link: {link.name}' + \
-                        f' (Data Rate: {link.data_rate}' + \
-                        f', Link Conflict: {[l.name for l in link.link_conflict]}' + \
-                        f', Reservation Time: [{reserve_time_start}:{reserve_time_end}])\n'
+                     f' (Data Rate: {link.data_rate})\n'
 
-    info += '\n---------------PATH---------------\n\n'
+    if __name__ == '__main__':
+        info += '\n---------------PATH---------------\n\n'
 
-    donor = node_dict['0']
+        donor = node_dict['0']
 
-    for link, paths in donor.path_to_node.items():
-        path = []
+        for node, paths in donor.path_to_node.items():
+            path = []
 
-        for p in paths:
-            path.append([n.name for n in p])
+            for p in paths:
+                path.append([n.name for n in p])
 
-        info += f'link: {link} (Path: {path})\n'
+            info += f'Node: {node} (Path: {path})\n'
 
-    info += '\n----------------------------------'
+        info += '\n----------------------------------'
 
     return info
 
@@ -166,45 +150,24 @@ def get_all_info(node_dict, graph = None):
 def __test_manual():
     print('===========Test manual============')
 
-    topo = Topo()
     topo_dict = {
         'node': {},
         'link': {}
     }
 
-    # add node
-    node_dict = topo_dict['node']
-    node_dict['0'] = topo.add_node('0', 'donor')
-    node_dict['1'] =topo.add_node('1', 'node')
-    node_dict['2'] =topo.add_node('2', 'node')
-    node_dict['3'] =topo.add_node('3', 'node')
-    node_dict['4'] =topo.add_node('4', 'node')
+    donor = add_node('0', 'donor')
+    node_1 = add_node('1', 'node')
 
-    # add link
-    link_dict = topo_dict['link']
-    link_dict['0-1'] = topo.add_link('0', '1')
-    link_dict['1-2'] = topo.add_link('1', '2')
-    link_dict['2-3'] = topo.add_link('2', '3')
-    link_dict['3-4'] = topo.add_link('3', '4')
+    topo_dict['node']['0'] = donor
+    topo_dict['node']['1'] = node_1
 
-    # add link error
-    try:
-        topo.add_link('4', '0')
-    except AssertionError as e:
-        print('--------Test add link error-------\n')
-        print(f'Error: {e}')
+    donor.child_node.append(node_1)
 
-    # add rule
-    topo.initialize_half_duplex_rule(node_dict)
+    link_01 = add_link(donor, node_1, 10)
+    topo_dict['link']['0-1'] = link_01
 
-    # find path
-    path_to_node = topo.find_path(node_dict)
-    donor = node_dict['0']
-    donor.path_to_node = path_to_node
-
-    # print(topo)
-    info = topo.get_all_info(node_dict, link_dict)
-    print(info)
+    find_path(topo_dict['node'])
+    print(get_all_info(topo_dict['node']))    
 
     print('===============End================')
 
@@ -214,19 +177,27 @@ def __test_auto():
     fc = lambda x, y: randint(x * 32 * 10**6, y * 32 * 10**6)
     data_rate_function = lambda d: round(32.4 + (31.7 * log10(d)) + (20 * log10(fc(23, 28))), 2)
 
-    node_dict, graph = generate_node_automatically()
-    link_dict = generate_link_automatically(node_dict, data_rate_function)
-    path_to_node = find_path(node_dict)
+    topo_dict_tree = {
+        'node': {},
+        'link': {}
+    }
 
-    donor = node_dict['0']
-    donor.path_to_node = path_to_node
+    topo_dict_dag = {
+        'node': {},
+        'link': {}
+    }
+
+    topo_dict_dag, topo_graph_dag = generate_topo_automatically(distance_corresponding=lambda: 200)
+    topo_dict_tree, topo_graph_tree = generate_topo_automatically(tree_type='TREE', topo_graph=topo_graph_dag, data_rate=data_rate_function)
 
     # print(topo)
-    info = get_all_info(node_dict, graph)
-    print(info)
+    info_dag = get_all_info(topo_dict_dag['node'], topo_graph_dag)
+    info_tree = get_all_info(topo_dict_tree['node'], topo_graph_tree)
+    print(info_dag)
+    print(info_tree)
 
     print('===============End================')
 
 if __name__ == '__main__':
-    # __test_manual()
+    __test_manual()
     __test_auto()
