@@ -67,8 +67,9 @@ def test_generate_topo():
     '''
 
     # Initialize
-    topo = generate_topo(4, 1, 3, 1)
-    topo2 = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2)
+    topo = generate_topo(4, 1, 3, 1, 'DAG')
+    topo2 = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'DAG')
+    topo3 = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'TREE')
 
     # Test the topo
     assert len(topo.topo_graph) == 4
@@ -87,6 +88,12 @@ def test_generate_topo():
     assert topo2.topo_dict['link'] != {}
     assert topo2.path_to_dst != {}
 
+    for path in topo3.path_to_dst.values():
+        assert len(path) == 1
+
+    with pytest.raises(ValueError):
+        generate_topo(4, 1, 3, 1, 'tst')
+
 def test_get_topo_info():
     '''
     Test the get_topo_info function
@@ -99,7 +106,7 @@ def test_get_topo_info():
     for node in nodes_list:
         insert_node(topo, node)
 
-    assign_nodes_child(topo.topo_dict['node'].values(), 1)
+    assign_nodes_child(topo.topo_dict['node'].values(), 1, 'DAG')
     assign_nodes_conflict(topo.topo_dict['node'].values())
 
     links_list = generate_link(topo.topo_dict['node'].values())

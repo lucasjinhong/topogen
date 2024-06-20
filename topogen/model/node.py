@@ -100,19 +100,32 @@ def generate_nodes_from_graph(topo_graph):
 
     return nodes
 
-def assign_nodes_child(nodes, affect_radius):
+def assign_nodes_child(nodes, affect_radius, tree_type):
     '''
     Assign the child nodes to the nodes
 
     Args:
         nodes (list[Node]): The nodes
+        affect_radius (int): The affect radius
+        tree_type (str): The type of the tree (DAG or TREE)
     '''
+
+    if tree_type not in ['DAG', 'TREE']:
+        raise ValueError('The tree type must be either "DAG" or "TREE"')
+
+    existed_child_nodes = set()
 
     for node in nodes:
         childs_node = find_node_childs(node, nodes, affect_radius)
 
-        for child_node in childs_node:
-            insert_child_node(node, child_node)
+        if tree_type == 'TREE':
+            for child_node in childs_node:
+                if child_node not in existed_child_nodes:
+                    insert_child_node(node, child_node)
+                    existed_child_nodes.add(child_node)
+        elif tree_type == 'DAG':
+            for child_node in childs_node:
+                insert_child_node(node, child_node)
 
 def assign_nodes_position(nodes, topo_graph):
     '''

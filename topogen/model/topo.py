@@ -49,23 +49,32 @@ def insert_link(topo, link):
 
     topo.topo_dict['link'][link.name] = link
 
-def generate_topo(size, min_node_amount, max_node_amount, affect_radius):
+def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_type):
     '''
     Generate the topo
+
+    Args:
+        size (int): The size of the grid
+        min_node_amount (int): The minimum amount of nodes
+        max_node_amount (int): The maximum amount of nodes
+        affect_radius (int): The affect radius
+        tree_type (str): The type of tree (DAG or TREE)
 
     Returns:
         topo (Topo): The topo
     '''
 
-    topo = Topo()
+    if tree_type not in ['DAG', 'TREE']:
+        raise ValueError('The tree type should be DAG or TREE')
 
+    topo = Topo()
     topo.topo_graph = generate_graph(size, min_node_amount, max_node_amount, affect_radius)
 
     nodes_list = generate_nodes_from_graph(topo.topo_graph)
     for node in nodes_list:
         insert_node(topo, node)
 
-    assign_nodes_child(topo.topo_dict['node'].values(), affect_radius)
+    assign_nodes_child(topo.topo_dict['node'].values(), affect_radius, tree_type)
     assign_nodes_conflict(topo.topo_dict['node'].values())
 
     links_list = generate_link(topo.topo_dict['node'].values())
