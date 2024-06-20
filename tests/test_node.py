@@ -1,4 +1,5 @@
 import pytest
+from math import ceil, sqrt
 
 from topogen.model.node import *
 from topogen.utils.function import generate_graph
@@ -107,16 +108,39 @@ def test_assign_nodes_child():
     '''
 
     # Initialize
-    topo_graph = [['0', '0', '-1', '0'], ['0', '-1', '0', '0'], ['-1', '0', '0', '0'], ['-1', '-1', '0', '0']]
+    topo_graph = [['0', '0', '-1', '0'], ['0', '-1', '0', '0'], ['-1', '0', '-1', '0'], ['-1', '-1', '0', '0']]
     node_dict = {node.name: node for node in generate_nodes_from_graph(topo_graph)}
 
+    print(topo_graph)
+
+
+
     # Test the nodes child
-    assign_nodes_child(node_dict.values(), 1)
+    assign_nodes_child(node_dict.values(), 1, 'DAG')
+
+    print(node_dict['3'].childs_node)
+
     assert node_dict['d'].childs_node == [node_dict['1']]
-    assert node_dict['1'].childs_node == [node_dict['2']]
-    assert node_dict['2'].childs_node == [node_dict['3'], node_dict['4']]
-    assert node_dict['3'].childs_node == []
+    assert node_dict['1'].childs_node == [node_dict['2'], node_dict['3']]
+    assert node_dict['2'].childs_node == [node_dict['4'], node_dict['5']]
+    assert node_dict['3'].childs_node == [node_dict['5']]
     assert node_dict['4'].childs_node == []
+    assert node_dict['5'].childs_node == []
+
+    topo_graph_tree = [['0', '0', '-1', '0'], ['0', '-1', '0', '0'], ['-1', '0', '-1', '0'], ['-1', '-1', '0', '0']]
+    node_dict_tree = {node.name: node for node in generate_nodes_from_graph(topo_graph_tree)}
+
+    assign_nodes_child(node_dict_tree.values(), 1, 'TREE')
+    assert node_dict_tree['d'].childs_node == [node_dict_tree['1']]
+    assert node_dict_tree['1'].childs_node == [node_dict_tree['2'], node_dict_tree['3']]
+    assert node_dict_tree['2'].childs_node == [node_dict_tree['4'], node_dict_tree['5']]
+    assert node_dict_tree['3'].childs_node == []
+    assert node_dict_tree['4'].childs_node == []
+    assert node_dict_tree['5'].childs_node == []
+
+    # Test the nodes child with the tree type is not DAG or TREE
+    with pytest.raises(ValueError):
+        assign_nodes_child(node_dict.values(), 1, 'test')
 
 def test_assign_nodes_position():
     '''

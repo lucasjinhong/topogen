@@ -46,7 +46,7 @@ def test_generate_link():
     # Initialize
     topo_graph = [['0', '0', '-1', '0'], ['0', '-1', '0', '0'], ['-1', '0', '0', '0'], ['-1', '-1', '0', '0']]
     node_dict = {node.name: node for node in generate_nodes_from_graph(topo_graph)}
-    assign_nodes_child(node_dict.values(), 1)
+    assign_nodes_child(node_dict.values(), 1, 'DAG')
 
     # Test the link
     link_dict = {link.name: link for link in generate_link(node_dict.values())}
