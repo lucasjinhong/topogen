@@ -120,20 +120,3 @@ def get_topo_info(topo):
         info += f'Node: {node} (Path Amount: {len(path)})\n'
 
     return info
-
-    # def child_node_distance_calculate(self, node, distance_corresponding):
-    #     '''
-    #     Calculate the distance between the node and its child node
-
-    #     Args:
-    #         node (obj): The node object
-    #         distance_corresponding (dict): The distance corresponding
-    #     '''
-
-    #     for child_node in node.child_node:
-    #         distance = sqrt((node.coordinate['x'] - child_node.coordinate['x']) ** 2 + (node.coordinate['y'] - child_node.coordinate['y']) ** 2)
-
-    #         if type(distance_corresponding) == int:
-    #             node.child_node_distance[child_node.name] = distance * distance_corresponding
-    #         else:
-    #             node.child_node_distance[child_node.name] = distance * distance_corresponding()
