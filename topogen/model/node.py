@@ -25,7 +25,7 @@ class Node:
         self.parents_node = []               # parent node of the node
         self.childs_node = []                # child nodes of the node
         self.conflict_node = []              # conflict nodes of the node
-    
+
 def insert_child_node(node, child_node):
     '''
     Add a child node to the node

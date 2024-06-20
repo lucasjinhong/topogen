@@ -14,7 +14,7 @@ class Topo:
         }
         self.topo_graph = []
         self.path_to_dst = {}
-    
+
 def insert_node(topo, node):
     '''
     Insert a node to the topo
@@ -35,7 +35,7 @@ def insert_node(topo, node):
 def insert_link(topo, link):
     '''
     Insert a link to the topo
-    
+
     Args:
         topo (Topo): the topo where the link is added
         link (Link): the link
@@ -46,7 +46,7 @@ def insert_link(topo, link):
 
     if link.name in topo.topo_dict['link']:
         raise ValueError('The link already exists')
-    
+
     topo.topo_dict['link'][link.name] = link
 
 def generate_topo(size, min_node_amount, max_node_amount, affect_radius):
@@ -108,7 +108,7 @@ def get_topo_info(topo):
             if link.node['src'] == node:
                 info +=  f'  Link: {link.name}' + \
                          f' (Data Rate: {link.data_rate})\n'
-                
+
     info += '\n-----------PATH AMOUNT------------\n\n'
 
     for node, paths in topo.path_to_dst.items():
@@ -120,20 +120,3 @@ def get_topo_info(topo):
         info += f'Node: {node} (Path Amount: {len(path)})\n'
 
     return info
-
-    # def child_node_distance_calculate(self, node, distance_corresponding):
-    #     '''
-    #     Calculate the distance between the node and its child node
-
-    #     Args:
-    #         node (obj): The node object
-    #         distance_corresponding (dict): The distance corresponding
-    #     '''
-
-    #     for child_node in node.child_node:
-    #         distance = sqrt((node.coordinate['x'] - child_node.coordinate['x']) ** 2 + (node.coordinate['y'] - child_node.coordinate['y']) ** 2)
-
-    #         if type(distance_corresponding) == int:
-    #             node.child_node_distance[child_node.name] = distance * distance_corresponding
-    #         else:
-    #             node.child_node_distance[child_node.name] = distance * distance_corresponding()
