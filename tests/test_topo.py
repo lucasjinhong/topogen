@@ -67,28 +67,20 @@ def test_generate_topo():
     '''
 
     # Initialize
-    topo = generate_topo(4, 1, 3, 1, 'DAG')
-    topo2 = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'DAG')
-    topo3 = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'TREE')
+    topo_dag = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'DAG')
+    topo_tree = generate_topo(7, ceil(sqrt(7)), 7 // 2, 2, 'TREE', topo_dag.topo_graph)
 
     # Test the topo
-    assert len(topo.topo_graph) == 4
-    assert len(topo.topo_graph[0]) == 4
-    assert topo.topo_graph[0].count('0') == 3
-    assert topo.topo_dict['node'] != {}
+    assert len(topo_dag.topo_graph) == 7
+    assert len(topo_dag.topo_graph[0]) == 7
+    assert topo_dag.topo_graph[0].count('0') == 6
+    assert topo_dag.topo_dict['node'] != {}
+    assert topo_dag.topo_dict['link'] != {}
+    assert topo_dag.path_to_dst != {}
 
-    if len(topo.topo_dict['node']) != 1:
-        assert topo.topo_dict['link'] != {}
-        assert topo.path_to_dst != {}
-
-    assert len(topo2.topo_graph) == 7
-    assert len(topo2.topo_graph[0]) == 7
-    assert topo2.topo_graph[0].count('0') == 6
-    assert topo2.topo_dict['node'] != {}
-    assert topo2.topo_dict['link'] != {}
-    assert topo2.path_to_dst != {}
-
-    for path in topo3.path_to_dst.values():
+    assert topo_tree.topo_graph ==  topo_dag.topo_graph
+    assert topo_tree.topo_dict['node'].keys() == topo_dag.topo_dict['node'].keys()
+    for path in topo_tree.path_to_dst.values():
         assert len(path) == 1
 
     with pytest.raises(ValueError):

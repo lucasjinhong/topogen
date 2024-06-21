@@ -97,6 +97,9 @@ def test_generate_graph():
                 parents_coordinate_list = [coordinate for coordinate in calculate_affected_coordinate((row, col), 1, 4, True) if topo_graph[coordinate[0]][coordinate[1]] == '-1']
                 assert len(parents_coordinate_list) > 0
 
+    for row in topo_graph:
+        assert row.count('0') == 4 - row.count('-1')
+
     size = 4
     test_cases = [
         (4, 3, 1, 1, "min_node_amount must be less than max_node_amount"),
@@ -110,3 +113,16 @@ def test_generate_graph():
     for size, min_node_amount, max_node_amount, affect_radius, comment in test_cases:
         with pytest.raises(ValueError, match=comment):
             generate_graph(size, min_node_amount, max_node_amount, affect_radius)
+
+def test_replace_graph_elements():
+    '''
+    Test the replace_graph_elements function
+    '''
+
+    # Initialize
+    topo_graph = [['0', '0', '-1', '0'], ['0', '-1', '0', '0'], ['-1', '0', '0', '0'], ['-1', '-1', '0', '0']]
+    target_graph = [['0', '0', '0', '0'], ['0', '0', '0', '0'], ['0', '0', '0', '0'], ['0', '0', '0', '0']]
+
+    # Replace the elements
+    assert target_graph == replace_graph_elements(topo_graph, '-1', '0')
+    assert target_graph == replace_graph_elements(topo_graph, r'^[^0]+0*$', '0')
