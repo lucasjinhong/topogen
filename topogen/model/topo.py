@@ -1,4 +1,4 @@
-from ..utils.function import generate_graph, find_all_paths_to_dst
+from ..utils.function import generate_graph, find_all_paths_to_dst, replace_graph_elements
 from .node import generate_nodes_from_graph, assign_nodes_child, assign_nodes_conflict
 from .link import generate_link
 
@@ -49,9 +49,11 @@ def insert_link(topo, link):
 
     topo.topo_dict['link'][link.name] = link
 
-def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_type):
+def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_type, graph=None):
     '''
-    Generate the topo
+    Generate the topo. 
+    If the graph is not provided, the topo graph will be generated automatically.
+    otherwise, the topo graph will be used to generate the topo.
 
     Args:
         size (int): The size of the grid
@@ -59,6 +61,7 @@ def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_ty
         max_node_amount (int): The maximum amount of nodes
         affect_radius (int): The affect radius
         tree_type (str): The type of tree (DAG or TREE)
+        graph (list[list]): The topo graph (default = None)
 
     Returns:
         topo (Topo): The topo
@@ -68,7 +71,11 @@ def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_ty
         raise ValueError('The tree type should be DAG or TREE')
 
     topo = Topo()
-    topo.topo_graph = generate_graph(size, min_node_amount, max_node_amount, affect_radius)
+
+    if graph:
+        topo.topo_graph = replace_graph_elements(graph, r'^[^0]+0*$', '-1')
+    else:
+        topo.topo_graph = generate_graph(size, min_node_amount, max_node_amount, affect_radius)
 
     nodes_list = generate_nodes_from_graph(topo.topo_graph)
     for node in nodes_list:

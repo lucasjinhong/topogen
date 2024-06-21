@@ -2,7 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='topogen',
-    version='0.3.0',
+    version='0.3.0.beta',
+    author = "lucasjh",
+    author_email = "jinhongkh@gmail.com",
+    url = "https://github.com/lucasjinhong/topogen.git",
     packages=find_packages(),
     install_requires=[
         # List your project's dependencies here.

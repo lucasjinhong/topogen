@@ -1,3 +1,4 @@
+from re import sub
 from random import sample, randint
 
 
@@ -142,3 +143,22 @@ def generate_graph(size, min_node_amount, max_node_amount, affect_radius):
                 affected_coordinate |= calculate_affected_coordinate((row, position), affect_radius, size)
 
     return topo_graph
+
+def replace_graph_elements(topo_graph, target_elements, replace_elements):
+    '''
+    Replace the target elements with the replace elements in the topo graph
+
+    Args:
+        topo_graph (list[list]): The topo graph
+        target_elements (set): The target elements
+        replace_elements (set): The replace elements
+
+    Returns:
+        topo_graph (list[list]): The topo graph
+    '''
+    graph = topo_graph.copy()
+
+    for i in range(len(graph)):
+        graph[i] = list(map(lambda x: sub(target_elements, replace_elements, x), graph[i]))
+
+    return graph
