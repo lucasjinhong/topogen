@@ -1,5 +1,3 @@
-from .topo_generator import generate_topo_automatically, get_all_info, find_path
-from .utils.function import add_link, add_node, implement_half_duplex_rule
-
-__all__ = ['generate_topo_automatically', 'get_all_info', 'find_path']
-__all__ += ['add_link', 'add_node', 'implement_half_duplex_rule']
+from topogen.topogen.model.topo import generate_topo, get_topo_info
+from topogen.topogen.model.link import Link, assign_data_rate
+from topogen.topogen.model.node import Node
