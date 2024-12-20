@@ -1,4 +1,6 @@
 from ..utils.error_handler import err_raise
+from ..utils.function import dist_between_coord
+from ..config.config import DATA_RATE_BPS_FORMULA
 
 
 class Link:
@@ -23,7 +25,7 @@ class Link:
         self.src_node = src_node
         self.dst_node = dst_node
 
-def generate_links(nodes):
+def generate_links(nodes, data_rate_equation=None):
     '''
     Generate the link
 
@@ -38,19 +40,15 @@ def generate_links(nodes):
 
     for src_node in nodes.values():
         for dst_node in src_node.children:
-            link = Link((src_node.name, dst_node.name), src_node, dst_node)
+            dist_src_dst = dist_between_coord(src_node.coordinate, dst_node.coordinate)
+
+            if data_rate_equation:
+                data_rate = data_rate_equation(dist_src_dst)
+            else:
+                data_rate = DATA_RATE_BPS_FORMULA(dist_src_dst)
+
+            link = Link((src_node.name, dst_node.name), src_node, dst_node, data_rate)
             links[link.name] = link
             src_node.links.append(link)
 
     return links
-
-# def assign_data_rate(link, data_rate):
-#     '''
-#     Assign the data rate to the link
-
-#     Args:
-#         link (Link): the link
-#         data_rate (int|function): the data rate
-#     '''
-
-#     link.data_rate = data_rate

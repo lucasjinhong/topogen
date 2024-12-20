@@ -1,65 +1,53 @@
-# import pytest
-# from math import ceil, sqrt
+import pytest
 
-# from topogen.model.topo import *
-# from topogen.model.node import Node, insert_child_node
-# from topogen.model.link import Link
+from topogen.model.topo import *
+from topogen.utils.function import dist_between_coord
 
-# def test_create_topo():
-#     '''
-#     Test the Topo class.
-#     '''
 
-#     # Initialize
-#     topo = Topo()
+def test_generate_topology_from_graph():
+    '''
+    Test the generate_topology_from_graph function
+    '''
 
-#     # Test the Topo object
-#     assert topo.topo_dict['node'] == {}
-#     assert topo.topo_dict['link'] == {}
-#     assert topo.topo_graph == []
-#     assert topo.path_to_dst == {}
+    # Test Boundary Cases
+    test_cases = [
+        ([], 'DAG', 1.5, 10),
+        ([[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 0], [1, 1, 0, 1]], 'test', 1.5, 10),
+        ([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 0], [1, 1, 0, 1]], 'TREE', 1.5, 10),
+        ([[0, 0, 0, 0], [1, 0, 1, 0], [0, 1, 0, 0], [1, 1, 0, 1]], 'TREE', 1.5, 10)
+    ]
 
-# def test_insert_node():
-#     '''
-#     Test the create_node function.
-#     '''
+    for graph, tree_type, max_dist_to_connect_nodes, size_of_grid_len in test_cases:
+        with pytest.raises(ValueError):
+            generate_topology_from_graph(graph, tree_type, max_dist_to_connect_nodes, size_of_grid_len)
 
-#     # Initalize
-#     topo = Topo()
+    graph = [[0, 1, 0, 0], [1, 0, 1, 0], [0, 1, 0, 0], [1, 1, 0, 1]]
+    topo = generate_topology_from_graph(graph, 'DAG', 1.5, 10)
+    nodes = topo.nodes
+    links = topo.links
+    
+    assert len(nodes) == 6
+    assert len(links) == 6
 
-#     node = Node('1', 'node')
-#     insert_node(topo, node)
+    assert nodes['5'].node_to_dst == {}
+    assert nodes['4'].node_to_dst == {}
+    assert nodes['3'].node_to_dst == {nodes['4']: [nodes['4']], nodes['5']: [nodes['5']]}
+    assert nodes['2'].node_to_dst == {nodes['3']: [nodes['3']], nodes['4']: [nodes['3']], nodes['5']: [nodes['3']]}
+    assert nodes['1'].node_to_dst == {nodes['3']: [nodes['3']], nodes['4']: [nodes['3']], nodes['5']: [nodes['3']]}
+    assert nodes['d'].node_to_dst == {nodes['1']: [nodes['1']], nodes['2']: [nodes['2']], nodes['3']: [nodes['1']
+                                                    ,nodes['2']], nodes['4']: [nodes['1'], nodes['2']], nodes['5']: [nodes['1'], nodes['2']]}
 
-#     # Test the node in the topo
-#     assert node.name in topo.topo_dict['node']
-#     assert topo.topo_dict['node'][node.name] == node
+    assert topo.topo_graph == {0: ['0', 'd', '0', '0'], 
+                               1: ['1', '0', '2', '0'], 
+                               2: ['0', '3', '0', '0'], 
+                               3: ['4', '5', '0', '0']}
+    
+    dist_formula = lambda dist: dist * 100
+    topo = generate_topology_from_graph(graph, 'DAG', 1.5, 10, dist_formula)
+    links = topo.links
 
-#     # Test if the node is already added
-#     with pytest.raises(ValueError):
-#         insert_node(topo, node)
-
-# def test_insert_link():
-#     '''
-#     Test the insert_link function
-#     '''
-
-#     # Initalize
-#     topo = Topo()
-
-#     node1 = Node('1', 'node')
-#     node2 = Node('2', 'node')
-#     insert_child_node(node1, node2)
-
-#     link = Link('link1', node1, node2)
-#     insert_link(topo, link)
-
-#     # Test the link in the topo
-#     assert link.name in topo.topo_dict['link']
-#     assert topo.topo_dict['link'][link.name] == link
-
-#     # Test if the link is already added
-#     with pytest.raises(ValueError):
-#         insert_link(topo, link)
+    assert links[('d', '1')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['1'].coordinate))
+    assert links[('d', '2')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['2'].coordinate))
 
 # def test_generate_topo():
 #     '''

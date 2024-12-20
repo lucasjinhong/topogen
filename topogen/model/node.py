@@ -1,4 +1,3 @@
-# from ..utils.function import find_node_childs
 from ..utils.function import dist_between_coord
 from ..utils.error_handler import err_raise
 
@@ -27,22 +26,24 @@ class Node:
         self.links = []
         self.conflict_nodes = []
 
+        # distributed implementation
         self.node_to_dst = {}               # the next node to the destination ex. {node3: [node1, node2]}
-        self.received_info = {}             # the received information while distributed ex. {'t':{info}}
-        self.forward_info = {}              # the information to be forwarded ex. {'t':{info}}
+        self.received_info = {}             # the received information ex. {'t': {Node: {info}})
+        self.send_info = []                 # the information to be sent to neighbour node
+        self.forward_info = []              # the information to be forwarded to another node
 
 def setup_conflict_nodes(nodes):
     '''
     Setup the conflict links
 
     Args:
-        nodes (list[Node]): The nodes
+        nodes (dict{str: Node}): The nodes
 
     Returns:
         None
     '''
 
-    for node in nodes:
+    for node in nodes.values():
         for parent in node.parents:
             node.conflict_nodes.append(parent)
 
@@ -80,11 +81,13 @@ def generate_nodes_from_graph(graph, max_dist_to_connect_nodes, tree_type):
 
         for i in range(node.coordinate[0] + 1, len(graph)):
             for j in range(len(graph[i])):
-                if graph[i][j] == 1 and dist_between_coord(node.coordinate, (i, j)) <= max_dist_to_connect_nodes:
-                    if (i, j) not in existed_coordinate:
+                coord = (i, j)
+
+                if graph[i][j] == 1 and dist_between_coord(node.coordinate, coord) <= max_dist_to_connect_nodes:
+                    if coord not in existed_coordinate:
                         child_node = Node(str(len(nodes)), 'node')
-                        child_node.coordinate = (i, j)
-                        existed_coordinate.append(child_node.coordinate)
+                        child_node.coordinate = coord
+                        existed_coordinate.append(coord)
 
                         nodes[child_node.name] = child_node
                         queue.append(child_node)
@@ -94,96 +97,27 @@ def generate_nodes_from_graph(graph, max_dist_to_connect_nodes, tree_type):
 
     return nodes
 
-# def assign_nodes_child(nodes, graph, max_dist_to_connect_nodes, tree_type):
-#     '''
-#     Assign the child nodes to the nodes
+def find_node_to_dst_by_graph(nodes, graph):
+    '''
+    Find the node to the destination
 
-#     Args:
-#         nodes (dict): The nodes
-#         graph (dict[list]): The graph
-#         max_dist_to_connect_nodes (int): The maximum distance to connect nodes
-#         tree_type (str): The type of the tree (DAG or TREE)
-#     '''
+    Args:
+        nodes (dict[str:Node]): The nodes
+        graph (dict[str:list[Node]]): The graph
 
+    Returns:
+        None
+    '''
 
-    # existed_child_nodes = set()
+    for i in range(len(graph) - 2, -1, -1):
+        for j in range(len(graph[i])):
+            if graph[i][j] == '0':
+                continue
 
-    # for node in nodes:
-    #     childs_node = find_node_childs(node, nodes, affect_radius)
+            node = nodes[graph[i][j]]
 
-    #     if tree_type == 'TREE':
-    #         for child_node in childs_node:
-    #             if child_node not in existed_child_nodes:
-    #                 insert_child_node(node, child_node)
-    #                 existed_child_nodes.add(child_node)
-    #     elif tree_type == 'DAG':
-    #         for child_node in childs_node:
-    #             insert_child_node(node, child_node)
+            for child in node.children:
+                node.node_to_dst[child] = [child]
 
-# def assign_nodes_child(nodes, affect_radius, tree_type):
-#     '''
-#     Assign the child nodes to the nodes
-
-#     Args:
-#         nodes (list[Node]): The nodes
-#         affect_radius (int): The affect radius
-#         tree_type (str): The type of the tree (DAG or TREE)
-#     '''
-
-#     if tree_type not in ['DAG', 'TREE']:
-#         raise ValueError('The tree type must be either "DAG" or "TREE"')
-
-#     existed_child_nodes = set()
-
-#     for node in nodes:
-#         childs_node = find_node_childs(node, nodes, affect_radius)
-
-#         if tree_type == 'TREE':
-#             for child_node in childs_node:
-#                 if child_node not in existed_child_nodes:
-#                     insert_child_node(node, child_node)
-#                     existed_child_nodes.add(child_node)
-#         elif tree_type == 'DAG':
-#             for child_node in childs_node:
-#                 insert_child_node(node, child_node)
-
-# def assign_nodes_position(nodes, topo_graph):
-#     '''
-#     Assign the node position
-
-#     Args:
-#         nodes (list[Node]): The nodes
-#         topo_graph (list[list]): The topo graph
-
-#     Returns:
-#         topo_graph (list[list]): The topo graph
-#     '''
-
-#     unassigned_nodes = [node for node in nodes if node.coordinate == {}]
-#     i = 0
-
-#     while i < len(topo_graph) and unassigned_nodes != []:
-#         for j in range(len(topo_graph[i])):
-#             if topo_graph[i][j] == '-1':
-#                 node = unassigned_nodes.pop(0)
-#                 topo_graph[i][j] = node.name
-#                 assign_coordinate(node, i, j)
-
-#             if unassigned_nodes == []:
-#                 break
-
-#         i += 1
-
-#     return topo_graph
-
-# def assign_nodes_conflict(nodes):
-#     '''
-#     Assign the conflict nodes to the nodes
-
-#     Args:
-#         nodes (list[Node]): The nodes
-#     '''
-
-#     for node in nodes:
-#         for child_node in node.childs_node:
-#             insert_conflict_node(node, child_node)
+                for descendant in child.node_to_dst.keys():
+                    node.node_to_dst.setdefault(descendant, []).append(child)

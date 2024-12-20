@@ -1,7 +1,6 @@
-from ..utils.function import generate_graph, find_all_paths_to_dst, replace_graph_elements, graph_matrix_to_dict
 from ..utils.error_handler import err_raise
-from .node import generate_nodes_from_graph, setup_conflict_nodes
-# from .node import generate_nodes_from_graph, assign_nodes_child, assign_nodes_conflict
+from ..utils.function import graph_matrix_to_dict, replace_graph_elements, find_paths_from_donor_to_all_nodes
+from .node import generate_nodes_from_graph, setup_conflict_nodes, find_node_to_dst_by_graph
 from .link import generate_links
 
 
@@ -12,7 +11,7 @@ class Topo:
         self.topo_graph = {}
         self.path_to_dst = {}
 
-def generate_topology_from_graph(graph, tree_type, max_dist_to_connect_nodes):
+def generate_topology_from_graph(graph, tree_type, max_dist_to_connect_nodes, size_of_grid_len, data_rate_formula=None):
     '''
     Generate the topo from the graph
 
@@ -20,106 +19,37 @@ def generate_topology_from_graph(graph, tree_type, max_dist_to_connect_nodes):
         graph (list[list[int]]): The graph of the topo
         tree_type (str): The type of the tree (DAG or TREE)
         max_dist_to_connect_nodes: (float): The maximum distance allowed to connect nodes
+        size_of_grid_len (int): The size per grid (meter)
+        data_rate_formula (function(distance)): The data rate formula (default is the Shannon Capacity formula)
 
     Returns:
         Topo: The topo
 
     Example:
-        topo = generate_topology_from_graph([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0]], 'DAG', 1)
+        topo = generate_topology_from_graph([[0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 1, 0], [1, 0, 0, 0]], 'DAG', 1.5, 10)
     '''
 
     # error handling
     err_raise(ValueError, 'The graph is empty', graph == [] or [] in graph)
     err_raise(ValueError, 'The tree type should be DAG or TREE', tree_type not in ['DAG', 'TREE'])
-    err_raise(ValueError, 'Only Donor can be the root node', graph[0].count(1) != 0)
+    err_raise(ValueError, 'Only Donor can be the root node', graph[0].count(1) != 1)
 
     topo = Topo()
     topo.topo_graph = graph_matrix_to_dict(graph)
-    topo.nodes = generate_nodes_from_graph(topo.topo_graph)
-    topo.links = generate_links(topo.nodes)
+    topo.nodes = generate_nodes_from_graph(topo.topo_graph, max_dist_to_connect_nodes, tree_type)
 
-    setup_conflict_nodes(topo.nodes.values())
-    
+    if data_rate_formula:
+        topo.links = generate_links(topo.nodes, data_rate_formula)
+    else:
+        topo.links = generate_links(topo.nodes)
 
-# def insert_node(topo, node):
-#     '''
-#     Insert a node to the topo
+    topo.topo_graph = replace_graph_elements(topo.topo_graph, topo.nodes)
 
-#     Args:
-#         topo (Topo): the topo where the node is added
-#         node (Node): the node
+    setup_conflict_nodes(topo.nodes)
+    find_node_to_dst_by_graph(topo.nodes, topo.topo_graph)
+    topo.path_to_dst = find_paths_from_donor_to_all_nodes(topo.nodes)
 
-#     Returns:
-#         Topo: the topo
-#     '''
-
-#     if node.name in topo.topo_dict['node']:
-#         raise ValueError('The node already exists')
-
-#     topo.topo_dict['node'][node.name] = node
-
-# def insert_link(topo, link):
-#     '''
-#     Insert a link to the topo
-
-#     Args:
-#         topo (Topo): the topo where the link is added
-#         link (Link): the link
-
-#     Returns:
-#         Topo: the topo
-#     '''
-
-#     if link.name in topo.topo_dict['link']:
-#         raise ValueError('The link already exists')
-
-#     topo.topo_dict['link'][link.name] = link
-
-# def generate_topo(size, min_node_amount, max_node_amount, affect_radius, tree_type, graph=None):
-#     '''
-#     Generate the topo. 
-#     If the graph is not provided, the topo graph will be generated automatically.
-#     otherwise, the topo graph will be used to generate the topo.
-
-#     Args:
-#         size (int): The size of the grid
-#         min_node_amount (int): The minimum amount of nodes
-#         max_node_amount (int): The maximum amount of nodes
-#         affect_radius (int): The affect radius
-#         tree_type (str): The type of tree (DAG or TREE)
-#         graph (list[list]): The topo graph (default = None)
-
-#     Returns:
-#         topo (Topo): The topo
-#     '''
-
-#     if tree_type not in ['DAG', 'TREE']:
-#         raise ValueError('The tree type should be DAG or TREE')
-
-#     topo = Topo()
-
-#     if graph:
-#         topo.topo_graph = replace_graph_elements(graph, r'^[^0]+0*$', '-1')
-#     else:
-#         topo.topo_graph = generate_graph(size, min_node_amount, max_node_amount, affect_radius)
-
-#     nodes_list = generate_nodes_from_graph(topo.topo_graph)
-#     for node in nodes_list:
-#         insert_node(topo, node)
-
-#     assign_nodes_child(topo.topo_dict['node'].values(), affect_radius, tree_type)
-#     assign_nodes_conflict(topo.topo_dict['node'].values())
-
-#     links_list = generate_link(topo.topo_dict['node'].values())
-#     for link in links_list:
-#         insert_link(topo, link)
-
-#     pending_nodes = [node for node in topo.topo_dict['node'].values() if node.type == 'node']
-
-#     for node in pending_nodes:
-#         topo.path_to_dst[node.name] = find_all_paths_to_dst(topo.topo_dict['node']['d'], node)
-
-#     return topo
+    return topo
 
 # def get_topo_info(topo):
 #     '''

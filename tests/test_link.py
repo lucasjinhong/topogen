@@ -1,43 +1,41 @@
 import pytest
 
-from topogen.model.link import generate_links
-from topogen.model.node import generate_nodes_from_graph
-# from topogen.model.node import Node, assign_nodes_child, insert_child_node, generate_nodes_from_graph
+from topogen.model.link import *
+from topogen.model.node import generate_nodes_from_graph, Node
+from topogen.config.config import DATA_RATE_BPS_FORMULA
+from topogen.utils.function import dist_between_coord
 
 
-# def test_create_link():
-#     '''
-#     Test the Link class
-#     '''
+def test_create_link():
+    '''
+    Test the Link class
+    '''
 
-#     # Create two Node objects
-#     node1 = Node('1', 'node')
-#     node2 = Node('2', 'node')
+    node1 = Node('1', 'node')
+    node2 = Node('2', 'node')
 
-#     # Test if the source node not connected to the destination node
-#     with pytest.raises(ValueError):
-#         Link('link1', node1, node2)
+    # Test if the source node not connected to the destination node
+    with pytest.raises(ValueError):
+        Link('link1', node1, node2)
 
-#     # Add node2 as a child node of node1
-#     insert_child_node(node1, node2)
+    node1.children.append(node2)
+    node2.parents.append(node1)
 
-#     # Create a Link object
-#     link = Link('link1', node1, node2)
+    link = Link('link1', node1, node2)
 
-#     # Test the Link object
-#     assert link.name == 'link1'
-#     assert link.data_rate == 0
-#     assert link.src_node == node1
-#     assert link.dst_node == node2
+    assert link.name == 'link1'
+    assert link.data_rate_bps == 0
+    assert link.src_node == node1
+    assert link.dst_node == node2
 
-#     link = Link('link2', node1, node2, 100)
+    link = Link('link2', node1, node2, 100)
 
-#     assert link.name == 'link2'
-#     assert link.data_rate == 100
+    assert link.name == 'link2'
+    assert link.data_rate_bps == 100
 
-#     # Test if the source node and the destination node are the same
-#     with pytest.raises(ValueError):
-#         Link('link1', node1, node1)
+    # Test if the source node and the destination node are the same
+    with pytest.raises(ValueError):
+        Link('link1', node1, node1)
 
 def test_generate_links():
     '''
@@ -58,23 +56,11 @@ def test_generate_links():
     assert links[('1', '3')].dst_node == nodes['3']
     assert links[('2', '3')].dst_node == nodes['3']
 
-# def test_assign_data_rate():
-#     '''
-#     Test the assign_data_rate function
-#     '''
+    assert links[('d', '1')].data_rate_bps == DATA_RATE_BPS_FORMULA(dist_between_coord(nodes['d'].coordinate, nodes['1'].coordinate))
+    assert links[('d', '2')].data_rate_bps == DATA_RATE_BPS_FORMULA(dist_between_coord(nodes['d'].coordinate, nodes['2'].coordinate))
 
-#     # Initialize
-#     node1 = Node('1', 'node')
-#     node2 = Node('2', 'node')
-#     insert_child_node(node1, node2)
+    dist_formula = lambda dist: dist * 100
+    links = generate_links(nodes, dist_formula)
 
-#     link = Link('link1', node1, node2)
-
-#     # Test the data rate
-#     assert link.data_rate == 0
-
-#     assign_data_rate(link, 100)
-#     assert link.data_rate == 100
-
-#     assign_data_rate(link, 200)
-#     assert link.data_rate == 200
+    assert links[('d', '1')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['1'].coordinate))
+    assert links[('d', '2')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['2'].coordinate))

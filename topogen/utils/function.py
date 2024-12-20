@@ -1,63 +1,40 @@
-from re import sub
-from random import sample, randint
 from math import sqrt
+from copy import deepcopy
+from yaml import safe_load
 
 
-# def find_all_paths_to_dst(src, dst):
-#     '''
-#     Find the path to the destination
+def find_paths_from_donor_to_all_nodes(nodes):
+    '''
+    Find the path from the donor node to all the nodes
 
-#     Args:
-#         src (str): the source node
-#         dst (str): the destination node
+    Args:
+        nodes (dict{str: Node}): The nodes
 
-#     Returns:
-#         paths_list (list[list]): the path to the destination
-#     '''
+    Returns:
+        paths (dict{str: list[Node]}): The path from the donor node to all the nodes
+    '''
 
-#     paths_list = []
-#     path = [src]
+    donor = nodes['d']
+    paths = {}
 
-#     def dfs(node):
-#         if node == dst:
-#             paths_list.append(path.copy())
-#             return
+    for node in nodes.values():
+        path_to_node = []
+        path = [donor]
 
-#         for child_node in node.childs_node:
-#             path.append(child_node)
-#             dfs(child_node)
-#             path.pop()
+        def dfs(n):
+            if n == node:
+                path_to_node.append(path.copy())
+                return
 
-#     dfs(src)
+            for child in n.children:
+                path.append(child)
+                dfs(child)
+                path.pop()
 
-#     return paths_list
+        dfs(donor)
+        paths[node.name] = path_to_node
 
-# def find_node_childs(target_node, nodes, affect_radius):
-#     '''
-#     Find the child nodes pf the target node
-
-#     Args:
-#         target_node (Node): The target node
-#         affect_radius (int): The affect radius
-#         nodes (list[Node]): The nodes in the topo
-
-#     Returns:
-#         child_nodes (list[Node]): The child nodes
-#     '''
-
-#     child_nodes = []
-
-#     x = target_node.coordinate['x']
-#     y = target_node.coordinate['y']
-
-#     for node in nodes:
-#         x_child = node.coordinate['x']
-#         y_child = node.coordinate['y']
-
-#         if x_child - x > 0 and x_child - x <= affect_radius and abs(y_child - y) <= affect_radius and node != target_node:
-#             child_nodes.append(node)
-
-#     return child_nodes
+    return paths
 
 # def calculate_affected_coordinate(coordinate, affect_radius, size, reverse=False):
 #     '''
@@ -159,24 +136,33 @@ def dist_between_coord(coord1, coord2):
 
     return sqrt((coord1[0] - coord2[0]) ** 2 + (coord1[1] - coord2[1]) ** 2)
 
-# def replace_graph_elements(original_graph, target_elements, replaced_elements):
-#     '''
-#     Replace the target elements with the replace elements in the topo graph
+def replace_graph_elements(graph, nodes):
+    '''
+    Replace the int elements with the nodes name in the topo graph
 
-#     Args:
-#         original_graph (dict[list]): The topo graph
-#         target_elements (set): The target elements
-#         replace_elements (set): The replace elements
+    Args:
+        graph (dict[list]): The topo graph
+        nodes (dict{str: Node}): The nodes
 
-#     Returns:
-#         graph (dict[list]): The graph
-#     '''
-#     graph = original_graph.copy()
+    Return:
+        new_graph (dict[list]): The graph
+    '''
 
-#     for i in range(len(graph)):
-#         graph[i] = list(map(lambda x: sub(target_elements, replaced_elements, x), graph[i]))
+    new_graph = deepcopy(graph)
 
-#     return graph
+    for key, value in new_graph.items():
+        for j in range(len(value)):
+            if value[j] == 0:
+                value[j] = '0'
+            elif value[j] == 1:
+                node = [node for node in nodes.values() if node.coordinate == (key, j)]
+
+                if node:
+                    value[j] = node[0].name
+                else:
+                    value[j] = '0'
+
+    return new_graph
 
 def graph_matrix_to_dict(graph_matrix):
     '''
@@ -194,3 +180,63 @@ def graph_matrix_to_dict(graph_matrix):
         graph_dict[i] = graph_matrix[i]
 
     return graph_dict
+
+def get_yaml_data(file_path):
+    '''
+    Get the data from the yaml file
+
+    Args:
+        file_path (str): file path
+    '''
+
+    with open(file_path, 'r') as file:
+        data = safe_load(file)
+
+    return data
+
+def info_exchange(nodes, time):
+    '''
+    Exchange the information between nodes.
+    The exchange mechanism propagates information one hop at a time. 
+    Therefore, if the destination node is two hops away from the source node, 
+    the information will reach the destination after two propagation steps.
+    
+    Args:
+        nodes (dict{str: Node}): The nodes
+        time (int): time to exchange the information
+
+    Returns:
+        None
+
+    Info:
+        The info format should be like this:
+
+        info =  {
+                    time: 't',
+                    src: 'src_node',
+                    dst: 'dst_node',
+                    path: ['node1', ..., 'dst_node'],   # should setup yourself
+                    hops: 'len(path)',
+                    info: {info}
+               }
+
+        The last element of the path should be the destination node
+    '''
+
+    for node in nodes.values():
+        if node.received_info.get(time - 10):
+            del node.received_info[time - 10]
+
+        satisfied_info = [i for i in node.send_info if i['time'] == time]
+        satisfied_info += [i for i in node.forward_info if i['time'] == time - i['hops'] + len(i['path'])]
+
+        node.send_info = list(filter(lambda i: i['time'] != time, node.send_info))
+        node.forward_info = list(filter(lambda i: i['time'] != time - i['hops'] + len(i['path']), node.forward_info))
+
+        for info in satisfied_info:
+            dst_node = info['path'].pop(0)
+
+            if info['path'] == []:
+                dst_node.received_info.setdefault(info['time'], []).append(info)
+            else:
+                dst_node.forward_info.append(info)
