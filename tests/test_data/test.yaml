@@ -1,0 +1,24 @@
+bandwith:
+    description: "Bandwith of the channel"
+    type: hz
+    value: 1000000000
+
+carrier_frequency:
+    description: "Carrier frequency of the channel"
+    type: Ghz
+    value: 23
+
+tx_power:
+    description: "Transmit power of the channel"
+    type: dbm
+    value: 30
+
+noise_coefficient:
+    description: "Noise coefficient of the channel"
+    type: dbm
+    value: -174
+
+interference:
+    description: "Interference of the channel"
+    type: watt
+    value: 0

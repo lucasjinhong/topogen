@@ -1,164 +1,242 @@
-from re import sub
-from random import sample, randint
+from math import sqrt
+from copy import deepcopy
+from yaml import safe_load
 
 
-def find_all_paths_to_dst(src, dst):
+def find_paths_from_donor_to_all_nodes(nodes):
     '''
-    Find the path to the destination
+    Find the path from the donor node to all the nodes
 
     Args:
-        src (str): the source node
-        dst (str): the destination node
+        nodes (dict{str: Node}): The nodes
 
     Returns:
-        paths_list (list[list]): the path to the destination
+        paths (dict{str: list[Node]}): The path from the donor node to all the nodes
     '''
 
-    paths_list = []
-    path = [src]
+    donor = nodes['d']
+    paths = {}
 
-    def dfs(node):
-        if node == dst:
-            paths_list.append(path.copy())
-            return
+    for node in nodes.values():
+        path_to_node = []
+        path = [donor]
 
-        for child_node in node.childs_node:
-            path.append(child_node)
-            dfs(child_node)
-            path.pop()
+        def dfs(n):
+            if n == node:
+                path_to_node.append(path.copy())
+                return
 
-    dfs(src)
+            for child in n.children:
+                path.append(child)
+                dfs(child)
+                path.pop()
 
-    return paths_list
+        dfs(donor)
+        paths[node.name] = path_to_node
 
-def find_node_childs(target_node, nodes, affect_radius):
+    return paths
+
+# def calculate_affected_coordinate(coordinate, affect_radius, size, reverse=False):
+#     '''
+#     Calculate the affected coordinate
+
+#     Args:
+#         coordinate (tuple): The coordinate
+#         affect_radius (int): The affect radius
+#         size (int): The size of the topo graph
+
+#     Returns:
+#         affected_coordinate (set(tuple)): The affected coordinate
+#     '''
+
+#     if affect_radius < 1 or affect_radius > size // 2:
+#         raise ValueError('affect_radius must be greater than 1 and less than {}'.format(size // 2))
+
+#     affected_coordinate = {coordinate}
+#     x = coordinate[0]
+#     y = coordinate[1]
+
+#     if reverse:
+#         for i in range(1, affect_radius + 1):
+#             if x - i >= 0:
+#                 affected_coordinate.add((x - i, y))
+
+#                 for j in range(1, affect_radius + 1):
+#                     if y - j >= 0:
+#                         affected_coordinate.add((x - i, y - j))
+#                     if y + j < size:
+#                         affected_coordinate.add((x - i, y + j))
+#     else:
+#         for i in range(1, affect_radius + 1):
+#             if x + i < size:
+#                 affected_coordinate.add((x + i, y))
+
+#                 for j in range(1, affect_radius + 1):
+#                     if y - j >= 0:
+#                         affected_coordinate.add((x + i, y - j))
+#                     if y + j < size:
+#                         affected_coordinate.add((x + i, y + j))
+
+#     return affected_coordinate
+
+# def generate_graph(size, min_node_amount, max_node_amount, affect_radius):
+#     '''
+#     Generate the topo graph
+
+#     Args:
+#         size (int): The size of the topo graph per row
+#         min_node_amount (int): The min node amount in each row
+#         max_node_amount (int): The max node amount in each row
+#         affect_radius (int): The affect radius that a node can connect with other nodes
+
+#     Returns:
+#         topo_graph (list[list]): The topo graph
+#     '''
+
+#     if min_node_amount > max_node_amount:
+#         raise ValueError('min_node_amount must be less than max_node_amount')
+#     elif min_node_amount < 0 or max_node_amount < 1:
+#         raise ValueError('min_node_amount must be greater than 0 and max_node_amount must be greater than 1')
+#     elif min_node_amount > size or max_node_amount > size:
+#         raise ValueError('min_node_amount and max_node_amount must be less than size')
+#     elif affect_radius < 1 or affect_radius > size // 2:
+#         raise ValueError('affect_radius must be greater than 1 and less than {}'.format(size // 2))
+
+#     topo_graph = {i: ['0'] * size for i in range(size)}
+
+#     left_limit = size // 4 * 1
+#     right_limit = size // 4 * 2
+#     first_row_position = randint(left_limit, right_limit)
+#     topo_graph[0][first_row_position] = '-1'
+
+#     affected_coordinate = calculate_affected_coordinate((0, first_row_position), affect_radius, size)
+
+#     # generate the nodes
+#     for row in range(1, size):
+#         node_amount = randint(min_node_amount, max_node_amount)
+
+#         for position in sample(range(size), node_amount):
+#             if (row, position) in affected_coordinate:
+#                 topo_graph[row][position] = '-1'
+#                 affected_coordinate |= calculate_affected_coordinate((row, position), affect_radius, size)
+
+#     return topo_graph
+
+def dist_between_coord(coord1, coord2):
     '''
-    Find the child nodes pf the target node
+    Calculate the distance between two coordinates
 
     Args:
-        target_node (Node): The target node
-        affect_radius (int): The affect radius
-        nodes (list[Node]): The nodes in the topo
+        coord1 (tuple): The first coordinate
+        coord2 (tuple): The second coordinate
 
     Returns:
-        child_nodes (list[Node]): The child nodes
+        dist (int): The distance
     '''
 
-    child_nodes = []
+    return sqrt((coord1[0] - coord2[0]) ** 2 + (coord1[1] - coord2[1]) ** 2)
 
-    x = target_node.coordinate['x']
-    y = target_node.coordinate['y']
-
-    for node in nodes:
-        x_child = node.coordinate['x']
-        y_child = node.coordinate['y']
-
-        if x_child - x > 0 and x_child - x <= affect_radius and abs(y_child - y) <= affect_radius and node != target_node:
-            child_nodes.append(node)
-
-    return child_nodes
-
-def calculate_affected_coordinate(coordinate, affect_radius, size, reverse=False):
+def replace_graph_elements(graph, nodes):
     '''
-    Calculate the affected coordinate
+    Replace the int elements with the nodes name in the topo graph
 
     Args:
-        coordinate (tuple): The coordinate
-        affect_radius (int): The affect radius
-        size (int): The size of the topo graph
+        graph (dict[list]): The topo graph
+        nodes (dict{str: Node}): The nodes
 
-    Returns:
-        affected_coordinate (set(tuple)): The affected coordinate
+    Return:
+        new_graph (dict[list]): The graph
     '''
 
-    if affect_radius < 1 or affect_radius > size // 2:
-        raise ValueError('affect_radius must be greater than 1 and less than {}'.format(size // 2))
+    new_graph = deepcopy(graph)
 
-    affected_coordinate = {coordinate}
-    x = coordinate[0]
-    y = coordinate[1]
+    for key, value in new_graph.items():
+        for j in range(len(value)):
+            if value[j] == 0:
+                value[j] = '0'
+            elif value[j] == 1:
+                node = [node for node in nodes.values() if node.coordinate == (key, j)]
 
-    if reverse:
-        for i in range(1, affect_radius + 1):
-            if x - i >= 0:
-                affected_coordinate.add((x - i, y))
+                if node:
+                    value[j] = node[0].name
+                else:
+                    value[j] = '0'
 
-                for j in range(1, affect_radius + 1):
-                    if y - j >= 0:
-                        affected_coordinate.add((x - i, y - j))
-                    if y + j < size:
-                        affected_coordinate.add((x - i, y + j))
-    else:
-        for i in range(1, affect_radius + 1):
-            if x + i < size:
-                affected_coordinate.add((x + i, y))
+    return new_graph
 
-                for j in range(1, affect_radius + 1):
-                    if y - j >= 0:
-                        affected_coordinate.add((x + i, y - j))
-                    if y + j < size:
-                        affected_coordinate.add((x + i, y + j))
-
-    return affected_coordinate
-
-def generate_graph(size, min_node_amount, max_node_amount, affect_radius):
+def graph_matrix_to_dict(graph_matrix):
     '''
-    Generate the topo graph
+    Convert the matrix to the dictionary
 
     Args:
-        size (int): The size of the topo graph per row
-        min_node_amount (int): The min node amount in each row
-        max_node_amount (int): The max node amount in each row
-        affect_radius (int): The affect radius that a node can connect with other nodes
+        graph_matrix (list[list[int]]): The matrix
 
     Returns:
-        topo_graph (list[list]): The topo graph
+        graph_dict (dict{int:list[int]}): The dictionary
     '''
+    graph_dict = {}
 
-    if min_node_amount > max_node_amount:
-        raise ValueError('min_node_amount must be less than max_node_amount')
-    elif min_node_amount < 0 or max_node_amount < 1:
-        raise ValueError('min_node_amount must be greater than 0 and max_node_amount must be greater than 1')
-    elif min_node_amount > size or max_node_amount > size:
-        raise ValueError('min_node_amount and max_node_amount must be less than size')
-    elif affect_radius < 1 or affect_radius > size // 2:
-        raise ValueError('affect_radius must be greater than 1 and less than {}'.format(size // 2))
+    for i in range(len(graph_matrix)):
+        graph_dict[i] = graph_matrix[i]
 
-    topo_graph = [['0'] * size for _ in range(size)]
+    return graph_dict
 
-    left_limit = size // 4 * 1
-    right_limit = size // 4 * 2
-    first_row_position = randint(left_limit, right_limit)
-    topo_graph[0][first_row_position] = '-1'
-
-    affected_coordinate = calculate_affected_coordinate((0, first_row_position), affect_radius, size)
-
-    # generate the nodes
-    for row in range(1, size):
-        node_amount = randint(min_node_amount, max_node_amount)
-
-        for position in sample(range(size), node_amount):
-            if (row, position) in affected_coordinate:
-                topo_graph[row][position] = '-1'
-                affected_coordinate |= calculate_affected_coordinate((row, position), affect_radius, size)
-
-    return topo_graph
-
-def replace_graph_elements(topo_graph, target_elements, replace_elements):
+def get_yaml_data(file_path):
     '''
-    Replace the target elements with the replace elements in the topo graph
+    Get the data from the yaml file
 
     Args:
-        topo_graph (list[list]): The topo graph
-        target_elements (set): The target elements
-        replace_elements (set): The replace elements
+        file_path (str): file path
+    '''
+
+    with open(file_path, 'r') as file:
+        data = safe_load(file)
+
+    return data
+
+def info_exchange(nodes, time):
+    '''
+    Exchange the information between nodes.
+    The exchange mechanism propagates information one hop at a time. 
+    Therefore, if the destination node is two hops away from the source node, 
+    the information will reach the destination after two propagation steps.
+    
+    Args:
+        nodes (dict{str: Node}): The nodes
+        time (int): time to exchange the information
 
     Returns:
-        topo_graph (list[list]): The topo graph
+        None
+
+    Info:
+        The info format should be like this:
+
+        info =  {
+                    time: 't',
+                    src: 'src_node',
+                    dst: 'dst_node',
+                    path: ['node1', ..., 'dst_node'],   # should setup yourself
+                    hops: 'len(path)',
+                    info: {info}
+               }
+
+        The last element of the path should be the destination node
     '''
-    graph = topo_graph.copy()
 
-    for i in range(len(graph)):
-        graph[i] = list(map(lambda x: sub(target_elements, replace_elements, x), graph[i]))
+    for node in nodes.values():
+        if node.received_info.get(time - 10):
+            del node.received_info[time - 10]
 
-    return graph
+        satisfied_info = [i for i in node.send_info if i['time'] == time]
+        satisfied_info += [i for i in node.forward_info if i['time'] == time - i['hops'] + len(i['path'])]
+
+        node.send_info = list(filter(lambda i: i['time'] != time, node.send_info))
+        node.forward_info = list(filter(lambda i: i['time'] != time - i['hops'] + len(i['path']), node.forward_info))
+
+        for info in satisfied_info:
+            dst_node = info['path'].pop(0)
+
+            if info['path'] == []:
+                dst_node.received_info.setdefault(info['time'], []).append(info)
+            else:
+                dst_node.forward_info.append(info)
