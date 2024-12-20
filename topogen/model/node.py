@@ -1,4 +1,5 @@
-from ..utils.function import find_node_childs
+from ..utils.function import dist_between_coord
+from ..utils.error_handler import err_raise
 
 
 class Node:
@@ -8,162 +9,115 @@ class Node:
 
         Args:
             name (str): the name of the node
-            type_ (str): the type of the node
+            node_type (str): the type of the node
         '''
 
-        if node_type not in ['donor', 'node']:
-            raise ValueError('The node type must be either "donor" or "node"')
-        elif name == '':
-            raise ValueError('The node name cannot be empty')
-        elif type(name) != str:
-            raise ValueError('The node name must be a string')
+        # error handling
+        err_raise(ValueError, 'The node type must be either "donor" or "node"', node_type not in ['donor', 'node'])
+        err_raise(ValueError, 'The node name cannot be empty', name == '')
+        err_raise(ValueError, 'The node name must be a string', type(name) != str)
 
         self.name = name
         self.type = node_type
-        self.coordinate = {}                 # coordinate of the node
+        self.coordinate = ()
 
-        self.parents_node = []               # parent node of the node
-        self.childs_node = []                # child nodes of the node
-        self.conflict_node = []              # conflict nodes of the node
+        self.parents = []
+        self.children = []
+        self.links = []
+        self.conflict_nodes = []
 
-def insert_child_node(node, child_node):
+        # distributed implementation
+        self.node_to_dst = {}               # the next node to the destination ex. {node3: [node1, node2]}
+        self.received_info = {}             # the received information ex. {'t': {Node: {info}})
+        self.send_info = []                 # the information to be sent to neighbour node
+        self.forward_info = []              # the information to be forwarded to another node
+
+def setup_conflict_nodes(nodes):
     '''
-    Add a child node to the node
+    Setup the conflict links
 
     Args:
-        node (Node): the node where the child node is added
-        child_node (Node): the child node
-    '''
-
-    if node == child_node:
-        raise ValueError('The node and the child node cannot be the same')
-    elif child_node in node.childs_node:
-        raise ValueError('The child node already exists')
-
-    node.childs_node.append(child_node)
-    child_node.parents_node.append(node)
-
-def insert_conflict_node(node1, node2):
-    '''
-    Insert the conflict node
-
-    Args:
-        node1 (Node): the first node
-        node2 (Node): the second node
-    '''
-
-    if node2 in node1.conflict_node:
-        raise ValueError('The conflict node already exists')
-
-    node1.conflict_node.append(node2)
-    node2.conflict_node.append(node1)
-
-def assign_coordinate(node, x, y):
-    '''
-    Assign the coordinate to the node
-
-    Args:
-        node (Node): the node
-        x (int): the x coordinate
-        y (int): the y coordinate
-    '''
-
-    if x < 0 or y < 0:
-        raise ValueError('The coordinate must be positive')
-
-    node.coordinate['x'] = x
-    node.coordinate['y'] = y
-
-def generate_nodes_from_graph(topo_graph):
-    '''
-    Generate the node from the topo graph
-
-    Args:
-        topo_graph (list[list]): The topo graph
+        nodes (dict{str: Node}): The nodes
 
     Returns:
-        nodes (list[Node]): The nodes
+        None
     '''
 
-    if topo_graph == []:
-        raise ValueError('The topo graph is empty')
+    for node in nodes.values():
+        for parent in node.parents:
+            node.conflict_nodes.append(parent)
 
-    #generate donors
-    nodes = [Node('d', 'donor')]
+        for child in node.children:
+            node.conflict_nodes.append(child)
 
-    for i in range(1, len(topo_graph)):
-        for j in range(len(topo_graph[i])):
-            if topo_graph[i][j] == '-1':
-                nodes.append(Node(str(len(nodes)), 'node'))
+            for sibling in child.parents:
+                if sibling != node:
+                    node.conflict_nodes.append(sibling)
 
-    topo_graph = assign_nodes_position(nodes, topo_graph)
+def generate_nodes_from_graph(graph, max_dist_to_connect_nodes, tree_type):
+    '''
+    Generate the node from the graph and assign the coordinate, parents, children to the nodes
+    The node without parents will exclude from the nodes, except the donor
+
+    Args:
+        graph (dict{int:list[int]}): The graph
+        max_dist_to_connect_nodes (float): The maximum distance to connect nodes
+        tree_type (str): The type of the tree (DAG or TREE)
+
+    Returns:
+        nodes (dict{str: Node}): the nodes
+    '''
+
+    nodes = {}
+    donor = Node('d', 'donor')
+    donor.coordinate = (0, graph[0].index(1))
+    nodes['d'] = donor
+
+    queue = [donor]
+    existed_coordinate = [donor.coordinate]
+
+    while queue:
+        node = queue.pop(0)
+
+        for i in range(node.coordinate[0] + 1, len(graph)):
+            for j in range(len(graph[i])):
+                coord = (i, j)
+
+                if graph[i][j] == 1 and dist_between_coord(node.coordinate, coord) <= max_dist_to_connect_nodes:
+                    if coord not in existed_coordinate:
+                        child_node = Node(str(len(nodes)), 'node')
+                        child_node.coordinate = coord
+                        existed_coordinate.append(coord)
+
+                        nodes[child_node.name] = child_node
+                        queue.append(child_node)
+
+                    node.children.append(child_node)
+                    child_node.parents.append(node)
 
     return nodes
 
-def assign_nodes_child(nodes, affect_radius, tree_type):
+def find_node_to_dst_by_graph(nodes, graph):
     '''
-    Assign the child nodes to the nodes
+    Find the node to the destination
 
     Args:
-        nodes (list[Node]): The nodes
-        affect_radius (int): The affect radius
-        tree_type (str): The type of the tree (DAG or TREE)
-    '''
-
-    if tree_type not in ['DAG', 'TREE']:
-        raise ValueError('The tree type must be either "DAG" or "TREE"')
-
-    existed_child_nodes = set()
-
-    for node in nodes:
-        childs_node = find_node_childs(node, nodes, affect_radius)
-
-        if tree_type == 'TREE':
-            for child_node in childs_node:
-                if child_node not in existed_child_nodes:
-                    insert_child_node(node, child_node)
-                    existed_child_nodes.add(child_node)
-        elif tree_type == 'DAG':
-            for child_node in childs_node:
-                insert_child_node(node, child_node)
-
-def assign_nodes_position(nodes, topo_graph):
-    '''
-    Assign the node position
-
-    Args:
-        nodes (list[Node]): The nodes
-        topo_graph (list[list]): The topo graph
+        nodes (dict[str:Node]): The nodes
+        graph (dict[str:list[Node]]): The graph
 
     Returns:
-        topo_graph (list[list]): The topo graph
+        None
     '''
 
-    unassigned_nodes = [node for node in nodes if node.coordinate == {}]
-    i = 0
+    for i in range(len(graph) - 2, -1, -1):
+        for j in range(len(graph[i])):
+            if graph[i][j] == '0':
+                continue
 
-    while i < len(topo_graph) and unassigned_nodes != []:
-        for j in range(len(topo_graph[i])):
-            if topo_graph[i][j] == '-1':
-                node = unassigned_nodes.pop(0)
-                topo_graph[i][j] = node.name
-                assign_coordinate(node, i, j)
+            node = nodes[graph[i][j]]
 
-            if unassigned_nodes == []:
-                break
+            for child in node.children:
+                node.node_to_dst[child] = [child]
 
-        i += 1
-
-    return topo_graph
-
-def assign_nodes_conflict(nodes):
-    '''
-    Assign the conflict nodes to the nodes
-
-    Args:
-        nodes (list[Node]): The nodes
-    '''
-
-    for node in nodes:
-        for child_node in node.childs_node:
-            insert_conflict_node(node, child_node)
+                for descendant in child.node_to_dst.keys():
+                    node.node_to_dst.setdefault(descendant, []).append(child)
