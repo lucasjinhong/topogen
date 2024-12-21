@@ -43,11 +43,12 @@ def test_generate_topology_from_graph():
                                3: ['4', '5', '0', '0']}
     
     dist_formula = lambda dist: dist * 100
-    topo = generate_topology_from_graph(graph, 'DAG', 1.5, 10, dist_formula)
+    size_of_grid_lens = 10
+    topo = generate_topology_from_graph(graph, 'DAG', 1.5, size_of_grid_lens, dist_formula)
     links = topo.links
 
-    assert links[('d', '1')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['1'].coordinate))
-    assert links[('d', '2')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['2'].coordinate))
+    assert links[('d', '1')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['1'].coordinate) * size_of_grid_lens)
+    assert links[('d', '2')].data_rate_bps == dist_formula(dist_between_coord(nodes['d'].coordinate, nodes['2'].coordinate) * size_of_grid_lens)
 
 # def test_generate_topo():
 #     '''
