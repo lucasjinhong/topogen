@@ -25,12 +25,14 @@ class Link:
         self.src_node = src_node
         self.dst_node = dst_node
 
-def generate_links(nodes, data_rate_equation=None):
+def generate_links(nodes, size_of_grid_lens, data_rate_equation=None):
     '''
     Generate the link
 
     Args:
         nodes (dict{str: Node}): the nodes
+        size_of_grid_lens (int): the size of the grid (meter)
+        data_rate_equation (function(distance)): the data rate equation (default is the Shannon Capacity)
 
     Returns:
         links (dict{str: Link}): the links
@@ -40,7 +42,7 @@ def generate_links(nodes, data_rate_equation=None):
 
     for src_node in nodes.values():
         for dst_node in src_node.children:
-            dist_src_dst = dist_between_coord(src_node.coordinate, dst_node.coordinate)
+            dist_src_dst = dist_between_coord(src_node.coordinate, dst_node.coordinate) * size_of_grid_lens
 
             if data_rate_equation:
                 data_rate = data_rate_equation(dist_src_dst)

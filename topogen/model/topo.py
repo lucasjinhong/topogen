@@ -39,9 +39,9 @@ def generate_topology_from_graph(graph, tree_type, max_dist_to_connect_nodes, si
     topo.nodes = generate_nodes_from_graph(topo.topo_graph, max_dist_to_connect_nodes, tree_type)
 
     if data_rate_formula:
-        topo.links = generate_links(topo.nodes, data_rate_formula)
+        topo.links = generate_links(topo.nodes, size_of_grid_len, data_rate_formula)
     else:
-        topo.links = generate_links(topo.nodes)
+        topo.links = generate_links(topo.nodes, size_of_grid_len)
 
     topo.topo_graph = replace_graph_elements(topo.topo_graph, topo.nodes)
 
