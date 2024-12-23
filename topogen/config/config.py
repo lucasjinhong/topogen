@@ -1,9 +1,10 @@
 from math import log10
+from os import path
 
 from topogen.utils.function import get_yaml_data
 
-
-channel_config = get_yaml_data('topogen/config/channel_config.yaml')
+dir_path = path.dirname(path.realpath(__file__))
+channel_config = get_yaml_data(path.join(dir_path, 'channel_config.yaml'))
 
 bandwidth           = channel_config['bandwidth']['value']
 noise_coefficient   = channel_config['noise_coefficient']['value']
