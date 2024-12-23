@@ -8,6 +8,7 @@ setup(
     author_email = "jinhongkh@gmail.com",
     url = "https://github.com/lucasjinhong/topogen.git",
     packages=find_packages(),
+    package_data={'topogen': ['config/*.yaml']},
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',
