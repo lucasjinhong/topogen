@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='topogen',
-    version='0.4.1',
+    version='0.4.2',
     description='A simple tool to generate the network topology',
     author = "lucasjh",
     author_email = "jinhongkh@gmail.com",

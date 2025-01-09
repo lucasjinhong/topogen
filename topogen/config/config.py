@@ -1,4 +1,4 @@
-from math import log10
+from math import log2, log10
 from os import path
 
 from topogen.utils.function import get_yaml_data
@@ -21,6 +21,6 @@ noise_watt      = dbm_to_watt(noise_coefficient) * bandwidth # watt
 sinr    = lambda dist: rx_power_watt(dist) / (noise_watt + interference) # ratio
 snr     = lambda dist: rx_power_watt(dist) - noise_watt # ratio
 
-shanon_capacity = lambda dist: bandwidth * log10(1 + sinr(dist)) # bps
+shanon_capacity = lambda dist: bandwidth * log2(1 + sinr(dist)) # bps
 
 DATA_RATE_BPS_FORMULA = lambda dist: shanon_capacity(dist) # bps
