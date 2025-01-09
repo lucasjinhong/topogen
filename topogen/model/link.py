@@ -25,6 +25,9 @@ class Link:
         self.src_node = src_node
         self.dst_node = dst_node
 
+        self.state = False          # True is On, False is Off
+        self.extra_data_rate = 0    # the data rate that havent been used yet
+
 def generate_links(nodes, size_of_grid_lens, data_rate_equation=None):
     '''
     Generate the link

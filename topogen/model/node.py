@@ -26,6 +26,9 @@ class Node:
         self.links = []
         self.conflict_nodes = []
 
+        self.forward_packets = []           # the packets to be forwarded
+        self.received_packets = []          # the packets received
+
         # distributed implementation
         self.node_to_dst = {}               # the next node to the destination ex. {node3: [node1, node2]}
         self.received_info = {}             # the received information ex. {'t': {Node: {info}})
