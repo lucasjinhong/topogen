@@ -77,7 +77,7 @@ def generate_nodes_from_graph(graph, max_dist_to_connect_nodes, tree_type):
     nodes['d'] = donor
 
     queue = [donor]
-    existed_coordinate = [donor.coordinate]
+    existed_coordinate = {donor.coordinate: donor}
 
     while queue:
         node = queue.pop(0)
@@ -87,14 +87,15 @@ def generate_nodes_from_graph(graph, max_dist_to_connect_nodes, tree_type):
                 coord = (i, j)
 
                 if graph[i][j] == 1 and dist_between_coord(node.coordinate, coord) <= max_dist_to_connect_nodes:
-                    if coord not in existed_coordinate:
+                    if coord not in existed_coordinate.keys():
                         child_node = Node(str(len(nodes)), 'node')
                         child_node.coordinate = coord
-                        existed_coordinate.append(coord)
+                        existed_coordinate[coord] = child_node
 
                         nodes[child_node.name] = child_node
                         queue.append(child_node)
 
+                    child_node = existed_coordinate[coord]
                     node.children.append(child_node)
                     child_node.parents.append(node)
 
